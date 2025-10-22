@@ -1,0 +1,5 @@
+{
+  "name": "Olympus Hub SaaS Workbench",
+  "description": "A single pane of glass for Site Reliability Engineers (SREs) to discover, diagnose, and remediate failed or long-running file application instances. It provides integrated logging, SOPs, and safe, role-based controls to minimize context switching and mean time to resolution.",
+  "requestFramePermissions": []
+}
