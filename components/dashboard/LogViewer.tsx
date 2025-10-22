@@ -40,7 +40,7 @@ const LogViewer: React.FC<{
   const traceId = logs.find(log => log.traceId)?.traceId;
 
   return (
-    <div className="h-full flex flex-col bg-slate-950 p-4 rounded-lg">
+    <div className="flex flex-col bg-slate-950 p-4 rounded-lg">
       <div className="flex justify-between items-center mb-3 shrink-0">
         <h4 className="font-medium text-slate-300">Logs for: <span className="font-mono text-sky-400">{task.name}</span></h4>
         {traceId && (
@@ -71,7 +71,7 @@ const LogViewer: React.FC<{
             </div>
         )}
       </div>
-      <div className="flex-1 overflow-y-auto font-mono text-xs text-slate-400 pr-2">
+      <div className="font-mono text-xs text-slate-400 pr-2">
         {logs.map((log, i) => {
           const levelColor = log.level === 'ERROR' ? 'text-red-400' : log.level === 'WARN' ? 'text-amber-400' : 'text-sky-400';
           const messageHighlight = log.level === 'ERROR' ? 'text-red-300' : '';

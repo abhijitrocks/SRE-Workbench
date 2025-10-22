@@ -1,7 +1,79 @@
-
-import React, { useState } from 'react';
-import { AppInstance, Task } from '../../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { AppInstance, Task, User, InstanceStatus } from '../../types';
 import { postInstanceAction } from '../../services/apiService';
+
+const ChevronDownIcon = ({ className = '' }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"></path></svg>;
+
+export const ActionsDropdown: React.FC<{
+  instance: AppInstance;
+  user: User;
+  onActionClick: (action: 'resume' | 'cancel' | 'skip') => void;
+}> = ({ instance, user, onActionClick }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const failedTask = instance.tasks.find(t => t.status === InstanceStatus.FAILED);
+  const canResume = failedTask && instance.sop?.permissionsRequired.includes(user.role);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleItemClick = (action: 'resume' | 'cancel' | 'skip') => {
+    onActionClick(action);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center bg-sky-600 hover:bg-sky-700 text-white font-medium px-4 py-2 rounded-md text-sm transition-colors shadow-sm"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+      >
+        Actions
+        <ChevronDownIcon className="ml-2 h-4 w-4" />
+      </button>
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+          <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+            <button
+              onClick={() => handleItemClick('resume')}
+              disabled={!canResume}
+              className="w-full text-left text-slate-700 block px-4 py-2 text-sm hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-white"
+              title={!canResume ? "Resume not permitted by SOP or your role" : "Resume from failed step"}
+              role="menuitem"
+            >
+              Resume from failed step
+            </button>
+            <button
+              onClick={() => handleItemClick('cancel')}
+              className="w-full text-left text-slate-700 block px-4 py-2 text-sm hover:bg-slate-100"
+              role="menuitem"
+            >
+              Cancel Instance
+            </button>
+            <button
+              onClick={() => handleItemClick('skip')}
+              className="w-full text-left text-slate-700 block px-4 py-2 text-sm hover:bg-slate-100"
+              role="menuitem"
+            >
+              Skip Failed Records
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 interface ActionModalsProps {
   action: 'resume' | 'cancel' | 'skip';

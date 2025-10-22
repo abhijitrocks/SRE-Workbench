@@ -120,6 +120,7 @@ export interface AppInstance {
   processingStages?: ProcessingStage[];
   outputFiles?: OutputFile[];
   isNotified?: boolean;
+  exceptionInstanceId?: string;
 }
 
 export interface LogEntry {
@@ -149,4 +150,48 @@ export interface ScheduledJob {
   };
   nextExpectedRun: string;
   status: ScheduleStatus;
+}
+
+export interface ExceptionInstance {
+  id: string;
+  name: string;
+  description: string;
+  criticality: string;
+  createdAt: string;
+  definitionCode: string;
+  status: 'Open' | 'Closed' | 'In Progress';
+  // --- For Detail View ---
+  exceptionDescription?: string;
+  createdDate?: string;
+  closureDate?: string | null;
+  requestDefinitionCode?: string;
+  createdBy?: { name: string; avatarChar: string };
+  requestId?: string;
+  payload?: any;
+}
+
+export interface SystemRequest {
+  title: string;
+  status: 'In Progress' | 'Completed' | 'Failed';
+  syrTitle: string;
+  requestId: string;
+  dateCreated: string;
+  completedAt: string | null;
+  createdBy: { name: string; avatarChar: string; avatarColor: string };
+  requestDefinitionCode: string;
+  workflow: string;
+  exceptionId: string;
+  exceptionDefinitionCode: string;
+  history: RequestHistoryEvent[];
+}
+
+export interface RequestHistoryEvent {
+  user: { name: string; avatarChar: string; avatarColor: string };
+  actionText: string;
+  link?: boolean;
+  details: string;
+  timestamp: string;
+  remarks?: string;
+  showTaskDetails?: boolean;
+  type: 'review' | 'creation' | 'completion';
 }

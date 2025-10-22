@@ -1,5 +1,6 @@
-import { AppInstance, LogEntry, InstanceStatus, ScheduledJob, ScheduleStatus, BusinessImpact } from '../types';
-import { mockAppInstances, mockScheduledJobs } from '../constants';
+
+import { AppInstance, LogEntry, InstanceStatus, ScheduledJob, ScheduleStatus, BusinessImpact, ExceptionInstance, SystemRequest } from '../types';
+import { mockAppInstances, mockScheduledJobs, mockExceptionInstances, detailedExceptionInstance, mockSystemRequest } from '../constants';
 
 // Simulate network latency
 const LATENCY = 500;
@@ -19,6 +20,82 @@ export const getSchedules = (): Promise<ScheduledJob[]> => {
     }, LATENCY);
   });
 };
+
+export const getExceptionInstances = (): Promise<ExceptionInstance[]> => {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(JSON.parse(JSON.stringify(mockExceptionInstances)));
+    }, LATENCY);
+  });
+};
+
+export const getExceptionInstance = (id: string): Promise<ExceptionInstance | undefined> => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            // Find the base exception instance from the mock list
+            const instance = mockExceptionInstances.find(inst => inst.id === id);
+
+            if (instance) {
+                // Create a detailed view by enriching the base data.
+                // This single logic path works for BOTH system and business exceptions,
+                // ensuring the 'requestId' is always carried over if it exists.
+                const detailedData: ExceptionInstance = {
+                    ...instance,
+                    exceptionDescription: instance.id === detailedExceptionInstance.id 
+                        ? detailedExceptionInstance.exceptionDescription // Use specific description for the main system exception
+                        : instance.description,
+                    createdDate: instance.createdAt,
+                    closureDate: null,
+                    requestDefinitionCode: 'RQDZINZZ0201',
+                    createdBy: { name: 'System', avatarChar: 'S' },
+                    // Use the specific rich payload for the original system exception, 
+                    // otherwise generate a generic mock one.
+                    payload: instance.id === detailedExceptionInstance.id 
+                        ? detailedExceptionInstance.payload 
+                        : {
+                            "message": `This is a mock payload for exception ${instance.id}`,
+                            "details": {
+                                "definitionCode": instance.definitionCode,
+                                "criticality": instance.criticality,
+                                "description": instance.description
+                            },
+                            "source": `{'record':{'id':'mock-record-for-${instance.id}','status':'PENDING'}}`
+                        }
+                };
+                resolve(JSON.parse(JSON.stringify(detailedData)));
+            } else {
+                resolve(undefined);
+            }
+        }, LATENCY);
+    });
+};
+
+export const getSystemRequest = (requestId: string): Promise<SystemRequest | undefined> => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            // Find the exception that has this request ID to make the data consistent
+            const exception = mockExceptionInstances.find(ex => ex.requestId === requestId);
+            
+            if (exception) {
+                const mockReq = JSON.parse(JSON.stringify(mockSystemRequest));
+                
+                // Customize the mock request based on the exception
+                mockReq.requestId = requestId;
+                mockReq.exceptionId = exception.id;
+                mockReq.title = `Recon Force Match - ${exception.name}`;
+                mockReq.syrTitle = `Recon Force Match - ${exception.name}`;
+                mockReq.exceptionDefinitionCode = exception.definitionCode;
+                mockReq.history[0].actionText = `is reviewing ${mockReq.title} request`;
+                mockReq.history[2].actionText = `created a new ${mockReq.title} request`;
+                
+                resolve(mockReq);
+            } else {
+                resolve(undefined);
+            }
+        }, LATENCY);
+    });
+};
+
 
 export const getInstanceDetails = (instanceId: string): Promise<AppInstance | undefined> => {
     return new Promise(resolve => {

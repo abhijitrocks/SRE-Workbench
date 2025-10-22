@@ -1,7 +1,5 @@
 
-
-
-import { AppInstance, InstanceStatus, User, UserRole, Zone, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus } from './types';
+import { AppInstance, InstanceStatus, User, UserRole, Zone, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest } from './types';
 import { allSops } from './constants/exceptions';
 
 export const mockUsers: { [key: string]: User } = {
@@ -46,6 +44,19 @@ export const mockUsers: { [key: string]: User } = {
     role: UserRole.PLATFORM_SRE,
     avatarUrl: 'https://i.pravatar.cc/150?u=brendasmith',
   },
+  nehaSharma: {
+    id: 'user-007',
+    name: 'Neha Sharma',
+    role: UserRole.SAAS_SRE,
+    saas: 'Next Orbit',
+    avatarUrl: 'https://i.pravatar.cc/150?u=nehasharma',
+  },
+  systemOperator: {
+      id: 'user-008',
+      name: 'psuuKzwdFasBPPVktcoY.operat',
+      role: UserRole.PLATFORM_SRE,
+      avatarUrl: 'https://i.pravatar.cc/150?u=sysop',
+  }
 };
 
 export const mockZones: Zone[] = [
@@ -62,43 +73,6 @@ export const mockZones: Zone[] = [
   { id: 'gcp-us-central1', name: 'GCP US-CENTRAL-1' },
   { id: 'azure-westus-2', name: 'Azure West-US-2' },
 ];
-
-const systemExceptionSOP: SOP = {
-  title: 'SOP: Move File Task Failure (404 Not Found)',
-  preconditions: [
-    'Verify the target directory exists and has correct permissions.',
-    'Check for any network connectivity issues to the file storage.',
-    'Ensure the service account running the task has access rights.',
-  ],
-  steps: [
-    '1. Identify the missing folder path from the error log message.',
-    '2. If the folder is missing, recreate it with the correct permissions.',
-    '3. If permissions are incorrect, update them using platform tools.',
-    '4. Once the underlying system issue is resolved, use the "Resume" action in the workbench.',
-  ],
-  permissionsRequired: [UserRole.PLATFORM_SRE, UserRole.SAAS_SRE],
-  rollbackActions: ['No rollback necessary. The task is idempotent.'],
-  expectedPostConditions: 'The task successfully moves the file and the instance progresses to the next step.',
-};
-
-const businessExceptionSOP: SOP = {
-  title: 'SOP: Schema Validation Error',
-  preconditions: [
-    'Confirm the file content does not match the expected schema version.',
-    'The error log should contain details about the validation failure (e.g., missing field, wrong data type).',
-  ],
-  steps: [
-    '1. Do NOT resume the task. This can lead to data corruption.',
-    '2. Contact the data publisher (Owner team) and provide them with the App Instance ID and error details.',
-    '3. The publisher must provide a corrected file.',
-    '4. Once a corrected file is available, the publisher will need to trigger a new file application instance.',
-    '5. Cancel the current failed instance with a reason noting it was replaced by a new file.',
-  ],
-  permissionsRequired: [UserRole.SAAS_SRE, UserRole.PLATFORM_SRE],
-  rollbackActions: ['Cancel the instance. State is not modified.'],
-  expectedPostConditions: 'The failed instance is cancelled, and a new instance is processing the corrected data.',
-};
-
 
 const generateMockInstances = (): AppInstance[] => {
   
@@ -148,7 +122,50 @@ const generateMockInstances = (): AppInstance[] => {
   ];
 
   const moreFailedEnrollmentInstances: AppInstance[] = [
-    // --- START: ADDED FAILED INSTANCES FOR OTHER SAAS ---
+    // --- START: UNCLASSIFIED FAILED INSTANCES (CORRECT) ---
+    // 1. Next Orbit: Unclassified failure, visible to SaaS SRE and Platform SRE
+    {
+      id: 'fail-no-exception-next-orbit-1',
+      fileName: 'Unclassified_Failure_NO_20250430.csv',
+      saas: 'Next Orbit',
+      zone: 'aws-us-east-1',
+      applicationName: 'enrollment-eligibility',
+      status: InstanceStatus.FAILED,
+      totalTasks: 9, completedTasks: 4, failedTaskIndex: 4,
+      startedAt: '2025-04-30T08:00:00Z', lastUpdatedAt: '2025-04-30T08:03:00Z',
+      retryCount: 3,
+      businessImpact: BusinessImpact.HIGH,
+      detailedErrorMessage: "Generic runtime error: java.lang.NullPointerException at com.example.Processor.run(Processor.java:123). Please check logs for details.",
+      tasks: [
+        ...enrollmentEligibilityBaseTasks.slice(0, 4),
+        { ...enrollmentEligibilityBaseTasks[4], status: InstanceStatus.FAILED, endTime: '2025-04-30T08:03:00Z', errorCode: 'RUNTIME_ERR', errorMessage: "java.lang.NullPointerException", retryAttempts: 3 },
+        ...enrollmentEligibilityBaseTasks.slice(5).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
+      ]
+    },
+    // 2. Olympus Hub SaaS (Electron): Unclassified failure, visible to Platform SRE
+    {
+      id: 'fail-no-exception-electron-1',
+      fileName: 'Unclassified_Failure_ELEC_20250430.xml',
+      saas: 'Electron',
+      zone: 'aws-us-east-1',
+      applicationName: 'Humana_ClaimsProcessing',
+      status: InstanceStatus.FAILED,
+      totalTasks: 5, completedTasks: 1, failedTaskIndex: 1,
+      startedAt: '2025-04-30T09:10:00Z', lastUpdatedAt: '2025-04-30T09:11:00Z',
+      retryCount: 0,
+      businessImpact: BusinessImpact.MEDIUM,
+      detailedErrorMessage: "Error code 500 from internal service: 'profile-manager'. Response: upstream connect error or disconnect/reset before headers. reset reason: connection termination",
+      tasks: [
+          { id: 't1', name: 'receive-file', status: InstanceStatus.SUCCESS, startTime: '2025-04-30T09:10:00Z', endTime: '2025-04-30T09:10:30Z', retryAttempts: 0 },
+          { id: 't2', name: 'decrypt-pgp', status: InstanceStatus.FAILED, startTime: '2025-04-30T09:10:30Z', endTime: '2025-04-30T09:11:00Z', retryAttempts: 0, errorCode: 'UPSTREAM_500', errorMessage: 'Upstream connect error or disconnect' },
+          { id: 't3', name: 'move-to-landing', status: InstanceStatus.PENDING, startTime: '2025-04-30T09:11:00Z', endTime: null, retryAttempts: 0 },
+          { id: 't4', name: 'validate-schema', status: InstanceStatus.PENDING, startTime: '2025-04-30T09:11:00Z', endTime: null, retryAttempts: 0 },
+          { id: 't5', name: 'archive-file', status: InstanceStatus.PENDING, startTime: '2025-04-30T09:11:00Z', endTime: null, retryAttempts: 0 },
+      ]
+    },
+    // --- END: UNCLASSIFIED FAILED INSTANCES ---
+    
+    // --- START: CLASSIFIED FAILED INSTANCES (CORRECTED) ---
     // 1. Electron: Business Exception (Conflict) in aws-us-east-1
     {
       id: 'ee-biz-fail-electron-1',
@@ -237,7 +254,7 @@ const generateMockInstances = (): AppInstance[] => {
         ...enrollmentEligibilityBaseTasks.slice(4).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
       ]
     },
-    // --- END: ADDED FAILED INSTANCES ---
+    // --- END: FAILED INSTANCES ---
     // 1. Business Exception: SchemaValidationException
     {
       id: 'ee-biz-fail-schema-4h5j-6k7l',
@@ -252,6 +269,7 @@ const generateMockInstances = (): AppInstance[] => {
       exceptionCode: 'SchemaValidationException',
       detailedErrorMessage: "SchemaValidationException: missing required field 'planCode' in grouped record",
       sop: allSops.SchemaValidationException,
+      exceptionInstanceId: 'EXP02292325',
       tasks: [
         ...enrollmentEligibilityBaseTasks.slice(0, 5),
         { ...enrollmentEligibilityBaseTasks[5], status: InstanceStatus.FAILED, endTime: '2025-04-28T14:06:00Z', errorCode: 'BIZ_SCHEMA_001', errorMessage: "missing required field 'planCode'", exceptionType: ExceptionType.BUSINESS },
@@ -272,6 +290,7 @@ const generateMockInstances = (): AppInstance[] => {
       exceptionCode: 'HeaderMissingOrMalformed',
       detailedErrorMessage: "HeaderMissingOrMalformed: Cannot read properties of null (reading 'CorporationID')",
       sop: allSops.HeaderMissingOrMalformed,
+      exceptionInstanceId: 'EXP02289830',
       tasks: [
         ...enrollmentEligibilityBaseTasks.slice(0, 3),
         { ...enrollmentEligibilityBaseTasks[3], status: InstanceStatus.FAILED, endTime: '2025-04-28T18:01:15Z', errorCode: 'BIZ_HEADER_001', errorMessage: "headerRecord is null", exceptionType: ExceptionType.BUSINESS },
@@ -287,11 +306,13 @@ const generateMockInstances = (): AppInstance[] => {
       totalTasks: 9, completedTasks: 6, failedTaskIndex: 6,
       startedAt: '2025-04-28T19:00:00Z', lastUpdatedAt: '2025-04-28T19:12:00Z',
       retryCount: 0, businessImpact: BusinessImpact.MEDIUM,
-      exceptionType: ExceptionType.BUSINESS,
       isNotified: false,
+      // CORRECTED: Added exceptionType
+      exceptionType: ExceptionType.BUSINESS,
       exceptionCode: 'BusinessRuleConflictWithExistingState',
       detailedErrorMessage: '409 Conflict: Plan with ID `PLAN123` already exists for beneficiary `BEN789`.',
       sop: allSops.BusinessRuleConflictWithExistingState,
+      exceptionInstanceId: 'EXP02289678',
       tasks: [
         ...enrollmentEligibilityBaseTasks.slice(0, 6),
         { ...enrollmentEligibilityBaseTasks[6], status: InstanceStatus.FAILED, endTime: '2025-04-28T19:12:00Z', errorCode: 'BIZ_CONFLICT_409', errorMessage: "Plan with ID `PLAN123` already exists", exceptionType: ExceptionType.BUSINESS },
@@ -354,7 +375,8 @@ const generateMockInstances = (): AppInstance[] => {
         ...enrollmentEligibilityBaseTasks.slice(0, 4),
         { ...enrollmentEligibilityBaseTasks[4], status: InstanceStatus.FAILED, endTime: '2025-04-28T17:02:00Z', errorCode: 'SYS_SQL_001', errorMessage: "SQL Parse Error", exceptionType: ExceptionType.SYSTEM, retryAttempts: 3 },
         ...enrollmentEligibilityBaseTasks.slice(5).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
-      ]
+      ],
+      exceptionInstanceId: 'EXP02312655',
     },
   ];
 
@@ -375,6 +397,7 @@ const generateMockInstances = (): AppInstance[] => {
       exceptionCode: 'BeneficiaryValidationException',
       detailedErrorMessage: 'BeneficiaryValidationException: beneficiaryId=null for line 152',
       sop: allSops.BeneficiaryValidationException,
+      exceptionInstanceId: 'EXP02289362',
       tasks: [
         ...enrollmentEligibilityBaseTasks.slice(0, 5).map(t => ({...t, status: InstanceStatus.SUCCESS})),
         { ...enrollmentEligibilityBaseTasks[5], status: InstanceStatus.FAILED, endTime: '2025-04-27T11:05:30Z', errorCode: 'BIZ_VAL_005', errorMessage: 'beneficiaryId=null for line 152', exceptionType: ExceptionType.BUSINESS },
@@ -441,11 +464,14 @@ const generateMockInstances = (): AppInstance[] => {
       completedTasks: 2,
       failedTaskIndex: 2,
       exceptionType: ExceptionType.SYSTEM,
-      sop: systemExceptionSOP,
+      // CORRECTED: Added specific exception code and SOP
+      exceptionCode: 'DownstreamAPITimeout',
+      sop: allSops.DownstreamAPITimeout,
       startedAt: '2025-04-26T10:00:00Z',
       lastUpdatedAt: '2025-04-26T10:05:30Z',
       retryCount: 3,
       businessImpact: BusinessImpact.HIGH,
+      detailedErrorMessage: 'Connection timed out to storage bucket s3://humana-claims-landing.',
       tasks: [
         { id: 't1', name: 'receive-file', status: InstanceStatus.SUCCESS, startTime: '2025-04-26T10:00:00Z', endTime: '2025-04-26T10:00:30Z', retryAttempts: 0 },
         { id: 't2', name: 'decrypt-pgp', status: InstanceStatus.SUCCESS, startTime: '2025-04-26T10:00:30Z', endTime: '2025-04-26T10:01:00Z', retryAttempts: 0 },
@@ -466,12 +492,16 @@ const generateMockInstances = (): AppInstance[] => {
       completedTasks: 1,
       failedTaskIndex: 1,
       exceptionType: ExceptionType.BUSINESS,
+      // CORRECTED: Added specific exception code and SOP
+      exceptionCode: 'HeaderMissingOrMalformed',
+      sop: allSops.HeaderMissingOrMalformed,
       isNotified: false,
-      sop: businessExceptionSOP,
       startedAt: '2025-04-26T09:30:00Z',
       lastUpdatedAt: '2025-04-26T09:32:00Z',
       retryCount: 0,
       businessImpact: BusinessImpact.MEDIUM,
+      detailedErrorMessage: 'Header mismatch. Expected `MEMBER_ID`, found `PATIENT_ID`.',
+      exceptionInstanceId: 'EXP02288649',
       tasks: [
         { id: 't1', name: 'download-file', status: InstanceStatus.SUCCESS, startTime: '2025-04-26T09:30:00Z', endTime: '2025-04-26T09:31:00Z', retryAttempts: 0 },
         { id: 't2', name: 'validate-roster-schema', status: InstanceStatus.FAILED, startTime: '2025-04-26T09:31:00Z', endTime: '2025-04-26T09:32:00Z', retryAttempts: 0, errorCode: 'BIZ_VAL_002', errorMessage: 'Header mismatch. Expected `MEMBER_ID`, found `PATIENT_ID`.', exceptionType: ExceptionType.BUSINESS },
@@ -530,12 +560,16 @@ const generateMockInstances = (): AppInstance[] => {
       completedTasks: 1,
       failedTaskIndex: 1,
       exceptionType: ExceptionType.BUSINESS,
+      // CORRECTED: Added specific exception code and SOP
+      exceptionCode: 'SchemaValidationException',
+      sop: allSops.SchemaValidationException,
       isNotified: false,
-      sop: businessExceptionSOP,
       startedAt: '2025-04-23T14:40:40Z',
       lastUpdatedAt: '2025-04-23T14:53:10Z',
       retryCount: 0,
       businessImpact: BusinessImpact.MEDIUM,
+      detailedErrorMessage: 'Field `patient_dob` has invalid format. Expected YYYY-MM-DD.',
+      exceptionInstanceId: 'EXP02288610',
       tasks: [
           { id: 't1', name: 'download-file', status: InstanceStatus.SUCCESS, startTime: '2023-10-20T08:00:00Z', endTime: '2023-10-20T08:01:00Z', retryAttempts: 0 },
           { id: 't2', name: 'validate-schema', status: InstanceStatus.FAILED, startTime: '2023-10-20T08:01:00Z', endTime: '2023-10-20T08:01:05Z', retryAttempts: 0, errorCode: 'BIZ_VAL_001', errorMessage: 'Field `patient_dob` has invalid format. Expected YYYY-MM-DD.', exceptionType: ExceptionType.BUSINESS },
@@ -877,3 +911,78 @@ export const mockScheduledJobs: ScheduledJob[] = [
     status: ScheduleStatus.OVERDUE,
   }
 ];
+
+
+// --- MOCK EXCEPTION DATA ---
+
+export const mockExceptionInstances: ExceptionInstance[] = [
+  // System Exception (Original)
+  { id: 'EXP02312655', name: 'SQL Processor Failure', description: 'SQL Parse Error: Unrecognized token', criticality: 'Tier 1', createdAt: '18 Mar 2025, 04:32 PM', definitionCode: 'SQLProcessorFailure', status: 'Open', requestId: 'SYR01294655' },
+  // Business Exceptions (Now with request IDs and better names)
+  { id: 'EXP02292325', name: 'Schema Validation Failed', description: 'Missing required field planCode', criticality: 'Tier 2', createdAt: '14 Mar 2025, 11:41 AM', definitionCode: 'SchemaValidationException', status: 'Open', requestId: 'SYR01294656' },
+  { id: 'EXP02289830', name: 'Header Malformed', description: 'Header record is missing CorporationID', criticality: 'Tier 1', createdAt: '13 Mar 2025, 11:38 PM', definitionCode: 'HeaderMissingOrMalformed', status: 'Open', requestId: 'SYR01294657' },
+  { id: 'EXP02289678', name: 'Business Rule Conflict', description: 'Plan already exists for beneficiary', criticality: 'Tier 2', createdAt: '13 Mar 2025, 10:52 PM', definitionCode: 'BusinessRuleConflictWithExistingState', status: 'Open', requestId: 'SYR01294658' },
+  { id: 'EXP02289362', name: 'Beneficiary Validation Failed', description: 'beneficiaryId is null', criticality: 'Tier 2', createdAt: '13 Mar 2025, 08:37 PM', definitionCode: 'BeneficiaryValidationException', status: 'Open', requestId: 'SYR01294659' },
+  { id: 'EXP02288649', name: 'Header Mismatch', description: 'Expected MEMBER_ID, found PATIENT_ID', criticality: 'Tier 3', createdAt: '13 Mar 2025, 04:23 PM', definitionCode: 'HeaderMissingOrMalformed', status: 'Open', requestId: 'SYR01294660' },
+  { id: 'EXP02288610', name: 'Invalid Data Format', description: 'patient_dob has invalid format', criticality: 'Tier 3', createdAt: '13 Mar 2025, 04:13 PM', definitionCode: 'SchemaValidationException', status: 'Open', requestId: 'SYR01294661' },
+  // Exceptions without requests for variety
+  { id: 'EXP02288486', name: 'Recon Test god', description: 'Recon Test Exception', criticality: 'Tier 1', createdAt: '13 Mar 2025, 03:38 PM', definitionCode: 'ajax.recon.BEDZZZ0001', status: 'Open' },
+  { id: 'EXP02288151', name: 'Recon Test god', description: 'Recon Test Exception', criticality: 'Tier 1', createdAt: '13 Mar 2025, 02:11 PM', definitionCode: 'ajax.recon.BEDZZZ0001', status: 'Open' },
+];
+
+export const detailedExceptionInstance: ExceptionInstance = {
+  ...mockExceptionInstances[0],
+  exceptionDescription: 'exception to test the BED flow god for recon',
+  createdDate: '18 Mar 2025, 04:32 PM',
+  closureDate: null,
+  requestDefinitionCode: 'RQDZINZZ0201',
+  createdBy: { name: 'System', avatarChar: 'S' },
+  requestId: 'SYR01294655',
+  payload: {
+    "manualMatchReasonDescription": "Incorrect refund processed by the system due to technical issue",
+    "record2Type": "SOURCE",
+    "record1Type": "SOURCE",
+    "manualMatchReasonCode": "Manual Refund",
+    "source": "{'record':{'id':'15422','primaryRecordIdentifier':'CVD_652809XXXXXX6965_036838_308.85_4riIHciZGAZZuCzW128t','exceptionId':null,'status':'PENDING','unMatchReasonCode':'RULE_CHAIN_CONFLICT','whitelistedColumns':{'0':'308.85','1':'05-Mar-25','2':'06-Mar-25','3':'4riIHciZGAZZuCzW128t','4':'CVD','5':'txn_2505cc74-6a94-4072-ac2e-3fa1a6cfc248','6':'652809XXXXXX6965','7':'2.02543E+14','8':'036838','9':'308.85','10':'4riIHciZGAZZuCzW128t','12':'CVD_652809XXXXXX6965_036838_308.85_4riIHciZGAZZuCzW128t'},'jobId':null,'primaryRecordDate':null,'primaryRecordName':'PRIMARY_KEY','columnHeaderMap':null,'secondaryRecordIdentifier':null,'secondaryRecordName':null,'secondaryRecordDate':null,'reconDefinitionId':null,'reconDefinitionName':null,'secondaryRecord':null,'reconExecutionId':null,'isManuallyMatched':false,'manualMatchReasonCode':null,'manualMatchReasonDescription':null,'reconExId':null,'additionalDetails':null,'reconRuleName':null,'reconRuleId':null,'ruleChainName':null,'ruleChainId':null,'matchCriteria':null,'isBreakage':false,'sourceRecordId':null,'sourceRecordIdentifier':null,'sourceRecordDate':null,'jobRunId':null,'isRemediated':false,'remediationAction':null,'remediationDescription':null,'remediationRemarks':null},'sourceRecordId':null}"
+  }
+};
+
+export const mockSystemRequest: SystemRequest = {
+  title: "Recon Force Match - Recon Test Exception",
+  status: "In Progress",
+  syrTitle: "Recon Force Match - Recon Test Exception",
+  requestId: "SYR01294655",
+  dateCreated: "2025-03-18T16:32:00Z",
+  completedAt: null,
+  createdBy: { name: "System", avatarChar: "S", avatarColor: "bg-purple-500" },
+  requestDefinitionCode: "RQDZINZZ0201",
+  workflow: "reconException",
+  exceptionId: "EXP02312655",
+  exceptionDefinitionCode: "ajax.recon.BEDZZZ0001",
+  history: [
+    {
+      user: { name: mockUsers.nehaSharma.name, avatarChar: "N", avatarColor: "bg-red-500" },
+      actionText: "is reviewing Recon Force Match request",
+      link: true,
+      details: "Review",
+      timestamp: "2025-03-18T16:32:00Z",
+      type: 'review',
+      showTaskDetails: true
+    },
+    {
+      user: { name: "System", avatarChar: "S", avatarColor: "bg-purple-500" },
+      actionText: "Created at",
+      details: "Created",
+      timestamp: "2025-03-18T16:32:00Z",
+      type: 'creation'
+    },
+    {
+      user: { name: mockUsers.systemOperator.name, avatarChar: "OS", avatarColor: "bg-orange-500" },
+      actionText: "created a new Recon Force Match request",
+      details: "Completed",
+      timestamp: "2025-03-18T16:32:00Z",
+      remarks: "No Remarks",
+      type: 'completion'
+    }
+  ]
+};
