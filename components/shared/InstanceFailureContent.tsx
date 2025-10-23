@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppInstance, Task, LogEntry, InstanceStatus, ExceptionType } from '../../types';
 import LogViewer from '../dashboard/LogViewer';
@@ -12,6 +11,27 @@ const CheckCircleIcon = () => <svg className="h-5 w-5 text-green-500" xmlns="htt
 const XCircleIcon = () => <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>;
 const ClockIcon = () => <svg className="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clipRule="evenodd" /></svg>;
 const SpinnerIcon = () => <svg className="h-5 w-5 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+const BanIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 mr-3 text-slate-500"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>;
+
+const CancellationBanner: React.FC<{ details: AppInstance['cancellationDetails'] }> = ({ details }) => {
+    if (!details) return null;
+    return (
+        <div className="bg-slate-100 border-l-4 border-slate-400 p-4 rounded-r-md mb-6">
+            <div className="flex">
+                <div className="flex-shrink-0">
+                    <BanIcon />
+                </div>
+                <div className="ml-3">
+                    <h3 className="text-md font-semibold text-slate-800">Instance Cancelled</h3>
+                    <div className="mt-2 text-sm text-slate-700">
+                        <p>This instance was manually cancelled by <strong>{details.user}</strong> on {new Date(details.timestamp).toLocaleString()}.</p>
+                        <p className="mt-2"><strong>Reason:</strong> <em className="font-mono bg-slate-200 text-slate-600 px-1 rounded">{details.reason}</em></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 
 const InstanceFailureContent: React.FC<{
@@ -49,6 +69,7 @@ const InstanceFailureContent: React.FC<{
     <>
       <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div className="space-y-6">
+          {instance.status === InstanceStatus.CANCELLED && <CancellationBanner details={instance.cancellationDetails} />}
           <InstanceMeta instance={instance} />
           <ExceptionDetails instance={instance} onSelectException={onSelectException} />
         </div>
@@ -257,6 +278,7 @@ const StatusChip: React.FC<{ status: InstanceStatus }> = ({ status }) => {
     [InstanceStatus.IN_PROGRESS]: { bg: 'bg-blue-100', text: 'text-blue-800' },
     [InstanceStatus.FAILED]: { bg: 'bg-red-100', text: 'text-red-800' },
     [InstanceStatus.PENDING]: { bg: 'bg-amber-100', text: 'text-amber-800' },
+    [InstanceStatus.CANCELLED]: { bg: 'bg-slate-200', text: 'text-slate-700' },
   };
   const style = styles[status];
   return (

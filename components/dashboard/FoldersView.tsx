@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { AppInstance, InstanceStatus } from '../../types';
 
 // --- ICONS ---
-const ChevronDownIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"></path></svg>;
-const FolderIcon = () => <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-sky-600"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
+const ChevronDownIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"></path></svg>;
+const FolderIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-sky-600"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
 const ArrowRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500 hover:text-sky-600"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>;
 
 const StatusIndicator: React.FC<{ status: InstanceStatus }> = ({ status }) => {
@@ -12,6 +12,8 @@ const StatusIndicator: React.FC<{ status: InstanceStatus }> = ({ status }) => {
         [InstanceStatus.IN_PROGRESS]: { dot: 'bg-blue-500', text: 'text-slate-700' },
         [InstanceStatus.FAILED]: { dot: 'bg-red-500', text: 'text-slate-700' },
         [InstanceStatus.PENDING]: { dot: 'bg-amber-500', text: 'text-slate-700' },
+        // Fix: Add CANCELLED status to support all instance states and resolve type error.
+        [InstanceStatus.CANCELLED]: { dot: 'bg-slate-500', text: 'text-slate-700' },
     };
     const style = styles[status];
     return (

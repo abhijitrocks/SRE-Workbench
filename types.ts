@@ -21,6 +21,7 @@ export enum InstanceStatus {
   IN_PROGRESS = 'In progress',
   FAILED = 'Failed',
   PENDING = 'Pending',
+  CANCELLED = 'Cancelled',
 }
 
 export enum ExceptionType {
@@ -121,6 +122,11 @@ export interface AppInstance {
   outputFiles?: OutputFile[];
   isNotified?: boolean;
   exceptionInstanceId?: string;
+  cancellationDetails?: {
+    reason: string;
+    user: string;
+    timestamp: string;
+  };
 }
 
 export interface LogEntry {

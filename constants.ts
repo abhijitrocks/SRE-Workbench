@@ -1,4 +1,3 @@
-
 import { AppInstance, InstanceStatus, User, UserRole, Zone, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest } from './types';
 import { allSops } from './constants/exceptions';
 
@@ -122,6 +121,81 @@ const generateMockInstances = (): AppInstance[] => {
   ];
 
   const moreFailedEnrollmentInstances: AppInstance[] = [
+    // --- START: CANCELLED INSTANCES ---
+    {
+      id: 'ee-biz-fail-next-orbit-1-cancelled',
+      fileName: 'Beneficiary_EE_File_20250430_01_cancelled.csv',
+      saas: 'Next Orbit',
+      zone: 'aws-us-east-1',
+      applicationName: 'enrollment-eligibility',
+      status: InstanceStatus.CANCELLED,
+      cancellationDetails: {
+        reason: 'Publisher confirmed data corruption in source file. A corrected version (instance id: b9d-e3k-l5n-p1r) has been provided.',
+        user: mockUsers.saasSre.name,
+        timestamp: '2025-04-30T14:20:00Z'
+      },
+      totalTasks: 9, completedTasks: 4, failedTaskIndex: 4,
+      startedAt: '2025-04-30T13:00:00Z', lastUpdatedAt: '2025-04-30T13:05:00Z',
+      retryCount: 0, businessImpact: BusinessImpact.HIGH,
+      exceptionType: ExceptionType.BUSINESS,
+      exceptionCode: 'InvalidJSONInput',
+      detailedErrorMessage: 'InvalidJSONInput: Unrecognized token `INVALID_TOKEN` at line 552, column 10.',
+      sop: allSops.InvalidJSONInput,
+      tasks: [
+        ...enrollmentEligibilityBaseTasks.slice(0, 4),
+        { ...enrollmentEligibilityBaseTasks[4], status: InstanceStatus.FAILED, endTime: '2025-04-30T13:05:00Z', errorCode: 'BIZ_JSON_002', errorMessage: "Unrecognized token 'INVALID_TOKEN'", exceptionType: ExceptionType.BUSINESS },
+        ...enrollmentEligibilityBaseTasks.slice(5).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
+      ]
+    },
+    {
+      id: 'ee-biz-fail-electron-1-cancelled',
+      fileName: 'Beneficiary_EE_File_20250429_01_old',
+      saas: 'Electron',
+      zone: 'aws-us-east-1',
+      applicationName: 'enrollment-eligibility',
+      status: InstanceStatus.CANCELLED,
+      cancellationDetails: {
+        reason: 'Duplicate file uploaded by publisher. Superseded by instance id: a8c-f2j-k4m-p9q.',
+        user: mockUsers.electronSre.name,
+        timestamp: '2025-04-29T11:00:00Z'
+      },
+      totalTasks: 9, completedTasks: 6, failedTaskIndex: 6,
+      startedAt: '2025-04-29T10:00:00Z', lastUpdatedAt: '2025-04-29T10:15:00Z',
+      retryCount: 0, businessImpact: BusinessImpact.MEDIUM,
+      exceptionType: ExceptionType.BUSINESS,
+      exceptionCode: 'BusinessRuleConflictWithExistingState',
+      detailedErrorMessage: '409 Conflict: Beneficiary `BEN456` cannot be terminated as they have an active claim.',
+      sop: allSops.BusinessRuleConflictWithExistingState,
+      tasks: [
+        ...enrollmentEligibilityBaseTasks.slice(0, 6),
+        { ...enrollmentEligibilityBaseTasks[6], status: InstanceStatus.FAILED, endTime: '2025-04-29T10:15:00Z', errorCode: 'BIZ_CONFLICT_409', errorMessage: "Beneficiary cannot be terminated", exceptionType: ExceptionType.BUSINESS },
+        ...enrollmentEligibilityBaseTasks.slice(7).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
+      ]
+    },
+    {
+      id: 'ee-sys-fail-jardownload-8u9i-cancelled',
+      fileName: 'Beneficiary_EE_File_20250428_06_old',
+      saas: 'Next Orbit', zone: 'azure-westus-2', applicationName: 'enrollment-eligibility',
+      status: InstanceStatus.CANCELLED,
+      cancellationDetails: {
+          reason: 'Artifactory was down for maintenance (INC-54321). The job window was missed. Will be re-run in the next cycle.',
+          user: mockUsers.platformSre.name,
+          timestamp: '2025-04-28T17:00:00Z'
+      },
+      totalTasks: 9, completedTasks: 5, failedTaskIndex: 5,
+      startedAt: '2025-04-28T16:00:00Z', lastUpdatedAt: '2025-04-28T16:05:00Z',
+      retryCount: 3, businessImpact: BusinessImpact.CRITICAL,
+      exceptionType: ExceptionType.SYSTEM,
+      exceptionCode: 'JarDownloadError',
+      detailedErrorMessage: 'Failed to download JAR from https://jfrog.internal.ciaas.zetaapps.in/...: 404 Not Found',
+      sop: allSops.JarDownloadError,
+      tasks: [
+        ...enrollmentEligibilityBaseTasks.slice(0, 5),
+        { ...enrollmentEligibilityBaseTasks[5], status: InstanceStatus.FAILED, endTime: '2025-04-28T16:05:00Z', retryAttempts: 3, errorCode: 'SYS_ARTIFACT_404', errorMessage: "Failed to download JAR", exceptionType: ExceptionType.SYSTEM },
+        ...enrollmentEligibilityBaseTasks.slice(6).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
+      ]
+    },
+    // --- END: CANCELLED INSTANCES ---
     // --- START: UNCLASSIFIED FAILED INSTANCES (CORRECT) ---
     // 1. Next Orbit: Unclassified failure, visible to SaaS SRE and Platform SRE
     {

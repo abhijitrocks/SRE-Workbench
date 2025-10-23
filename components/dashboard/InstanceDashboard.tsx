@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useMemo } from 'react';
 import { AppInstance, InstanceStatus, User, UserRole, ExceptionType, ScheduledJob, ScheduleStatus } from '../../types';
 import { mockAppInstances } from '../../constants';
@@ -70,6 +71,8 @@ const StatusIndicator: React.FC<{ status: InstanceStatus }> = ({ status }) => {
         [InstanceStatus.IN_PROGRESS]: { dot: 'bg-blue-500', text: 'text-slate-700' },
         [InstanceStatus.FAILED]: { dot: 'bg-red-500', text: 'text-slate-700' },
         [InstanceStatus.PENDING]: { dot: 'bg-amber-500', text: 'text-slate-700' },
+        // Fix: Add CANCELLED status to support all instance states and resolve type error.
+        [InstanceStatus.CANCELLED]: { dot: 'bg-slate-500', text: 'text-slate-700' },
     };
     const style = styles[status];
     return (

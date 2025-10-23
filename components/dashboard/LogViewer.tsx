@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { LogEntry, Task } from '../../types';
 
@@ -95,7 +94,7 @@ const LogViewer: React.FC<{
          <button onClick={onOpenLiveView} className="text-sm font-medium text-sky-500 hover:text-sky-400 hover:underline transition-colors">
             Open Live View
         </button>
-        <a href="#" className="text-sm font-medium text-sky-500 hover:text-sky-400 hover:underline">View in Kibana</a>
+        <a href="https://apm-europa.internal.mum1.zetaapps.in/_dashboards/app/discover#/?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:'2025-10-21T03:14:39.745Z',to:'2025-10-23T03:14:39.745Z'))&_a=(columns:!(_source),filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'logs-*',key:clusterName,negate:!f,params:(query:dia),type:phrase),query:(match_phrase:(clusterName:dia))),('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'logs-*',key:app,negate:!f,params:(query:dia-controller),type:phrase),query:(match_phrase:(app:dia-controller)))),index:'logs-*',interval:auto,query:(language:kuery,query:''),sort:!())" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-sky-500 hover:text-sky-400 hover:underline">View in Kibana</a>
       </div>
     </div>
   );

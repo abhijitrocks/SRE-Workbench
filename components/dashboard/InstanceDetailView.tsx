@@ -20,6 +20,7 @@ interface InstanceDetailViewProps {
 const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClose, user, onUpdateInstance, onSelectException }) => {
 
   const isSuccess = instance.status === InstanceStatus.SUCCESS;
+  const isCancelled = instance.status === InstanceStatus.CANCELLED;
   const [modalOpen, setModalOpen] = useState<'resume' | 'cancel' | 'skip' | null>(null);
   const [isNotifying, setIsNotifying] = useState(false);
 
@@ -59,7 +60,7 @@ const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClo
       <aside className="fixed top-0 right-0 h-full w-full max-w-7xl bg-slate-50 border-l border-slate-200 shadow-2xl z-50 flex flex-col animate-slide-in-right">
         <header className="p-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
           <div className="flex-grow">
-            {isSuccess ? (
+            {isSuccess || isCancelled ? (
               <h2 className="text-lg font-semibold text-slate-900">
                   {instance.fileName}
                   <span className="ml-3 inline-block">
@@ -86,7 +87,7 @@ const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClo
                     </span>
                 </button>
              )}
-             {!isSuccess && (
+             {!isSuccess && !isCancelled && (
                 <ActionsDropdown instance={instance} user={user} onActionClick={setModalOpen} />
             )}
             <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200 text-slate-500"><XIcon /></button>
@@ -123,6 +124,7 @@ const statusStyles: { [key in InstanceStatus]: { bg: string; text: string; dot: 
   [InstanceStatus.IN_PROGRESS]: { bg: 'bg-blue-100', text: 'text-blue-800', dot: 'bg-blue-500' },
   [InstanceStatus.FAILED]: { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' },
   [InstanceStatus.PENDING]: { bg: 'bg-amber-100', text: 'text-amber-800', dot: 'bg-amber-500' },
+  [InstanceStatus.CANCELLED]: { bg: 'bg-slate-200', text: 'text-slate-700', dot: 'bg-slate-500' },
 };
 
 const StatusChip: React.FC<{ status: InstanceStatus }> = ({ status }) => {
