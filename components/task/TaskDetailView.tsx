@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppInstance, User, InstanceStatus, Task, ExceptionInstance } from '../../types';
+import { AppInstance, User, InstanceStatus, Task, ExceptionInstance, AuditEventType } from '../../types';
 import ActionModals from '../dashboard/ActionModals';
 import InstanceFailureContent from '../shared/InstanceFailureContent';
 
@@ -19,22 +19,13 @@ interface TaskDetailViewProps {
 const TaskDetailView: React.FC<TaskDetailViewProps> = ({ data, onClose, user, onUpdateInstance }) => {
   const { instance, exception } = data;
   const [activeTab, setActiveTab] = useState('Task');
-  const [modalOpen, setModalOpen] = useState<'resume' | 'cancel' | 'skip' | null>(null);
-  const [selectedAction, setSelectedAction] = useState<'resume' | 'cancel' | 'skip' | ''>('');
+  const [modalOpen, setModalOpen] = useState<AuditEventType | null>(null);
+  const [selectedAction, setSelectedAction] = useState<AuditEventType | ''>('');
   
   const failedTask = instance.tasks.find(t => t.status === InstanceStatus.FAILED);
   const canResume = failedTask && instance.sop?.permissionsRequired.includes(user.role);
 
-  const handleActionSuccess = () => {
-    const updatedInstance = { ...instance };
-    
-    updatedInstance.status = InstanceStatus.IN_PROGRESS;
-    const taskIndex = updatedInstance.tasks.findIndex(t => t.id === failedTask?.id);
-    if (taskIndex > -1) {
-        updatedInstance.tasks[taskIndex].status = InstanceStatus.IN_PROGRESS;
-        updatedInstance.tasks[taskIndex].retryAttempts++;
-    }
-    updatedInstance.retryCount++;
+  const handleActionSuccess = (updatedInstance: AppInstance) => {
     onUpdateInstance(updatedInstance);
     setSelectedAction('');
   };
@@ -63,9 +54,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ data, onClose, user, on
                                 className="block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                             >
                                 <option value="" disabled>Choose an action...</option>
-                                <option value="resume" disabled={!canResume} title={!canResume ? "Resume not permitted by SOP or your role" : ""}>Resume from failed step</option>
-                                <option value="cancel">Cancel Instance</option>
-                                <option value="skip">Skip Failed Records</option>
+                                <option value="Resume" disabled={!canResume} title={!canResume ? "Resume not permitted by SOP or your role" : ""}>Resume from failed step</option>
+                                <option value="Cancel">Cancel Instance</option>
+                                <option value="Skip">Skip Failed Records</option>
                             </select>
                         </div>
                         <button 
@@ -128,6 +119,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ data, onClose, user, on
             action={modalOpen}
             instance={instance}
             task={failedTask}
+            user={user}
             onClose={() => setModalOpen(null)}
             onSuccess={handleActionSuccess}
         />

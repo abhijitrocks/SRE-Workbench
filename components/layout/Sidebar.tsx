@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const sidebarSections = [
@@ -16,7 +17,7 @@ const sidebarSections = [
 ];
 
 const ChevronDownIcon = () => (
-    <svg xmlns="http://www.w.org/2000/svg" width="20" height="20" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="m6 9 6 6 6-6"></path></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="m6 9 6 6 6-6"></path></svg>
 );
 
 interface NavItemProps {
@@ -41,16 +42,19 @@ interface SidebarProps {
   onNavigate: () => void;
   activeConsole: string;
   onConsoleChange: (consoleName: string) => void;
+  activeWorkbench: 'olympus-hub-saas' | 'next-orbit-saas' | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onNavigate, activeConsole, onConsoleChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ onNavigate, activeConsole, onConsoleChange, activeWorkbench }) => {
+  const workbenchTitle = activeWorkbench === 'next-orbit-saas' ? 'Next Orbit SaaS' : 'Olympus Hub SaaS';
+
   return (
     <nav className="hidden md:flex flex-col w-64 bg-slate-900 p-2">
       <div 
         onClick={onNavigate}
         className="flex items-center justify-between p-3 mb-4 rounded-md cursor-pointer hover:bg-slate-800 transition-colors"
       >
-        <span className="text-md font-bold text-white">Olympus Hub SaaS</span>
+        <span className="text-md font-bold text-white">{workbenchTitle}</span>
         <ChevronDownIcon />
       </div>
       

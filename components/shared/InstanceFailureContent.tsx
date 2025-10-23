@@ -5,13 +5,14 @@ import SopViewer from '../dashboard/SopViewer';
 import LiveLogsModal from '../dashboard/LiveLogsModal';
 import { getLogsForTask } from '../../services/apiService';
 import { allExceptionDefs } from '../../constants/exceptions';
+import AuditTrailViewer from './AuditTrailViewer';
 
 // --- ICONS ---
 const CheckCircleIcon = () => <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
 const XCircleIcon = () => <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>;
 const ClockIcon = () => <svg className="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clipRule="evenodd" /></svg>;
 const SpinnerIcon = () => <svg className="h-5 w-5 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
-const BanIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 mr-3 text-slate-500"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>;
+const BanIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 mr-3 text-slate-500"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>;
 
 const CancellationBanner: React.FC<{ details: AppInstance['cancellationDetails'] }> = ({ details }) => {
     if (!details) return null;
@@ -38,7 +39,7 @@ const InstanceFailureContent: React.FC<{
   instance: AppInstance;
   onSelectException?: (exceptionId: string) => void;
 }> = ({ instance, onSelectException }) => {
-  const [activeTab, setActiveTab] = useState<'tasks' | 'logs' | 'sop'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'logs' | 'sop' | 'history'>('tasks');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [logLoading, setLogLoading] = useState(false);
@@ -80,6 +81,7 @@ const InstanceFailureContent: React.FC<{
               <TabButton name="Task Timeline" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
               <TabButton name="Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
               <TabButton name="SOP" active={activeTab === 'sop'} onClick={() => setActiveTab('sop')} />
+              <TabButton name="History" active={activeTab === 'history'} onClick={() => setActiveTab('history')} count={instance.auditTrail?.length} />
             </nav>
           </div>
           <div className="mt-4">
@@ -95,6 +97,7 @@ const InstanceFailureContent: React.FC<{
             )}
             {activeTab === 'logs' && <LogViewer logs={logs} loading={logLoading} task={selectedTask} onOpenLiveView={() => setIsLiveLogsModalOpen(true)} />}
             {activeTab === 'sop' && <div className="bg-white p-4 rounded-lg border border-slate-200"><SopViewer instance={instance} /></div>}
+            {activeTab === 'history' && <AuditTrailViewer auditTrail={instance.auditTrail || []} />}
           </div>
         </div>
       </div>
@@ -257,9 +260,14 @@ const TaskItem: React.FC<{
     );
 };
 
-const TabButton: React.FC<{name: string, active: boolean, onClick: () => void}> = ({ name, active, onClick }) => (
-    <button onClick={onClick} className={`${active ? 'border-sky-500 text-sky-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
+const TabButton: React.FC<{name: string, active: boolean, onClick: () => void, count?: number}> = ({ name, active, onClick, count }) => (
+    <button onClick={onClick} className={`relative flex items-center ${active ? 'border-sky-500 text-sky-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
         {name}
+        {count !== undefined && count > 0 && (
+            <span className="ml-2 flex items-center justify-center bg-slate-200 text-slate-600 text-xs font-bold rounded-full h-5 w-5">
+                {count}
+            </span>
+        )}
     </button>
 );
 

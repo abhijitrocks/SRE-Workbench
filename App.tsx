@@ -22,6 +22,7 @@ const userCycleOrder = [
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'workbenches' | 'dashboard'>('workbenches');
+  const [activeWorkbench, setActiveWorkbench] = useState<'olympus-hub-saas' | 'next-orbit-saas' | null>(null);
   const [activeConsole, setActiveConsole] = useState('File Processing');
   const [currentUser, setCurrentUser] = useState<User>(mockUsers.saasSre);
   const [currentZone, setCurrentZone] = useState<Zone>(mockZones[0]);
@@ -69,6 +70,11 @@ const App: React.FC = () => {
   useEffect(() => {
     // Filter Instances
     let filteredInst = instances.filter(inst => inst.zone === currentZone.id);
+    
+    if (activeWorkbench === 'next-orbit-saas') {
+      filteredInst = filteredInst.filter(inst => inst.saas === 'Next Orbit');
+    }
+
     if (currentUser.role === UserRole.SAAS_SRE) {
       // SaaS SREs should see all their instances except for FAILED ones that are classified as SYSTEM exceptions.
       // This includes SUCCESS, IN_PROGRESS, PENDING, FAILED (Business), and FAILED (Unclassified).
@@ -80,12 +86,17 @@ const App: React.FC = () => {
     
     // Filter Schedules
     let filteredSched = scheduledJobs.filter(job => job.zone === currentZone.id);
+    
+    if (activeWorkbench === 'next-orbit-saas') {
+        filteredSched = filteredSched.filter(job => job.saas === 'Next Orbit');
+    }
+
     if (currentUser.role === UserRole.SAAS_SRE) {
         filteredSched = filteredSched.filter(job => job.saas === currentUser.saas);
     }
     setFilteredScheduledJobs(filteredSched);
 
-  }, [instances, scheduledJobs, currentZone, currentUser]);
+  }, [instances, scheduledJobs, currentZone, currentUser, activeWorkbench]);
 
   const handleSelectInstance = (instance: AppInstance | null) => {
     if (instance) {
@@ -152,7 +163,8 @@ const App: React.FC = () => {
   };
 
   const handleSelectWorkbench = (workbenchId: string) => {
-    if (workbenchId === 'olympus-hub-saas') {
+    if (workbenchId === 'olympus-hub-saas' || workbenchId === 'next-orbit-saas') {
+      setActiveWorkbench(workbenchId as 'olympus-hub-saas' | 'next-orbit-saas');
       setCurrentView('dashboard');
     }
   };
@@ -162,6 +174,7 @@ const App: React.FC = () => {
     setSelectedInstance(null);
     setSelectedException(null);
     setSelectedTaskViewData(null);
+    setActiveWorkbench(null);
   };
 
   const renderDashboard = () => {
@@ -196,7 +209,7 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen font-sans flex bg-slate-100">
-      {currentView === 'dashboard' && <Sidebar onNavigate={navigateToWorkbenches} activeConsole={activeConsole} onConsoleChange={setActiveConsole} />}
+      {currentView === 'dashboard' && <Sidebar onNavigate={navigateToWorkbenches} activeConsole={activeConsole} onConsoleChange={setActiveConsole} activeWorkbench={activeWorkbench} />}
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header 
           user={currentUser} 
@@ -206,6 +219,7 @@ const App: React.FC = () => {
           onSwitchUser={switchUser}
           onNavigateHome={navigateToWorkbenches}
           isDashboardView={currentView === 'dashboard'}
+          activeWorkbench={activeWorkbench}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {currentView === 'workbenches' && (
@@ -261,7 +275,10 @@ const WorkbenchCard: React.FC<{ title: string; description: string; id: string; 
 };
 
 const WorkbenchesView: React.FC<{onSelectWorkbench: (workbenchId: string) => void;}> = ({ onSelectWorkbench }) => {
-  const workbenches = [ { id: 'WBHINZZ0013', title: 'Olympus Hub SaaS', description: 'Discover, diagnose, and remediate failed file application instances.', icon: <BriefcaseIconWB />, handler: () => onSelectWorkbench('olympus-hub-saas'), disabled: false, }, ];
+  const workbenches = [
+    { id: 'WBHINZZ0013', title: 'Olympus Hub SaaS', description: 'Discover, diagnose, and remediate failed file application instances.', icon: <BriefcaseIconWB />, handler: () => onSelectWorkbench('olympus-hub-saas'), disabled: false, },
+    { id: 'WBHINZZ0014', title: 'Next Orbit SaaS', description: 'Dedicated workbench for Next Orbit specific workflows and instances.', icon: <BriefcaseIconWB />, handler: () => onSelectWorkbench('next-orbit-saas'), disabled: false, },
+  ];
   return (
     <div>
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Workbenches ({workbenches.filter(w => !w.disabled).length})</h1>

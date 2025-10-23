@@ -97,6 +97,21 @@ export interface SummaryMetrics {
   totalChangedPlans: number;
 }
 
+export type AuditEventType = 'Resume' | 'Skip' | 'Cancel' | 'Notify';
+
+export interface AuditEvent {
+  type: AuditEventType;
+  user: string;
+  timestamp: string;
+  taskId?: string;
+  taskName?: string;
+  details?: {
+    reason?: string;
+    skipCount?: number;
+    preRetryCount?: number;
+  };
+}
+
 
 export interface AppInstance {
   id: string;
@@ -127,6 +142,7 @@ export interface AppInstance {
     user: string;
     timestamp: string;
   };
+  auditTrail?: AuditEvent[];
 }
 
 export interface LogEntry {

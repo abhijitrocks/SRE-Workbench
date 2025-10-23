@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { AppInstance, User, InstanceStatus, Task, UserRole, ExceptionType } from '../../types';
+import { AppInstance, User, InstanceStatus, Task, UserRole, ExceptionType, AuditEventType } from '../../types';
 import FailedInstanceView from './FailedInstanceView';
 import SuccessInstanceView from './SuccessInstanceView';
 import ActionModals, { ActionsDropdown } from './ActionModals';
 import { notifySre } from '../../services/apiService';
 
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
-const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
-const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
+const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
 
 interface InstanceDetailViewProps {
   instance: AppInstance;
@@ -21,29 +21,20 @@ const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClo
 
   const isSuccess = instance.status === InstanceStatus.SUCCESS;
   const isCancelled = instance.status === InstanceStatus.CANCELLED;
-  const [modalOpen, setModalOpen] = useState<'resume' | 'cancel' | 'skip' | null>(null);
+  const [modalOpen, setModalOpen] = useState<AuditEventType | null>(null);
   const [isNotifying, setIsNotifying] = useState(false);
 
   const failedTask = !isSuccess ? instance.tasks.find(t => t.status === InstanceStatus.FAILED) : undefined;
 
-  const handleActionSuccess = () => {
-    const updatedInstance = { ...instance };
-    
-    updatedInstance.status = InstanceStatus.IN_PROGRESS;
-    const taskIndex = updatedInstance.tasks.findIndex(t => t.id === failedTask?.id);
-    if (taskIndex > -1) {
-        updatedInstance.tasks[taskIndex].status = InstanceStatus.IN_PROGRESS;
-        updatedInstance.tasks[taskIndex].retryAttempts++;
-    }
-    updatedInstance.retryCount++;
+  const handleActionSuccess = (updatedInstance: AppInstance) => {
     onUpdateInstance(updatedInstance);
   };
 
   const handleNotify = async () => {
     setIsNotifying(true);
     try {
-        await notifySre(instance.id);
-        onUpdateInstance({ ...instance, isNotified: true });
+        const { updatedInstance } = await notifySre(instance.id);
+        onUpdateInstance(updatedInstance);
     } catch (error) {
         console.error("Failed to notify SRE", error);
         // Maybe show a toast notification here
@@ -88,7 +79,7 @@ const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClo
                 </button>
              )}
              {!isSuccess && !isCancelled && (
-                <ActionsDropdown instance={instance} user={user} onActionClick={setModalOpen} />
+                <ActionsDropdown instance={instance} user={user} onActionClick={(action) => setModalOpen(action)} />
             )}
             <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200 text-slate-500"><XIcon /></button>
           </div>
@@ -110,6 +101,7 @@ const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClo
             action={modalOpen}
             instance={instance}
             task={failedTask}
+            user={user}
             onClose={() => setModalOpen(null)}
             onSuccess={handleActionSuccess}
         />

@@ -134,6 +134,14 @@ const generateMockInstances = (): AppInstance[] => {
         user: mockUsers.saasSre.name,
         timestamp: '2025-04-30T14:20:00Z'
       },
+      auditTrail: [
+        {
+          type: 'Cancel',
+          user: mockUsers.saasSre.name,
+          timestamp: '2025-04-30T14:20:00Z',
+          details: { reason: 'Publisher confirmed data corruption in source file. A corrected version (instance id: b9d-e3k-l5n-p1r) has been provided.' }
+        }
+      ],
       totalTasks: 9, completedTasks: 4, failedTaskIndex: 4,
       startedAt: '2025-04-30T13:00:00Z', lastUpdatedAt: '2025-04-30T13:05:00Z',
       retryCount: 0, businessImpact: BusinessImpact.HIGH,
@@ -431,7 +439,7 @@ const generateMockInstances = (): AppInstance[] => {
         ...enrollmentEligibilityBaseTasks.slice(6).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
       ]
     },
-    // 6. System Exception: SQLProcessorFailure
+    // 6. System Exception: SQLProcessorFailure with AUDIT TRAIL
     {
       id: 'ee-sys-fail-sql-3e4r-5t6y',
       fileName: 'Beneficiary_EE_File_20250428_07',
@@ -451,6 +459,18 @@ const generateMockInstances = (): AppInstance[] => {
         ...enrollmentEligibilityBaseTasks.slice(5).map(t => ({...t, status: InstanceStatus.PENDING, endTime: null })),
       ],
       exceptionInstanceId: 'EXP02312655',
+      auditTrail: [
+          {
+              type: 'Resume',
+              user: mockUsers.platformSre.name,
+              timestamp: '2025-04-28T17:01:30Z',
+              taskId: 't5',
+              taskName: 'compute-summary',
+              details: {
+                  preRetryCount: 2
+              }
+          }
+      ]
     },
   ];
 

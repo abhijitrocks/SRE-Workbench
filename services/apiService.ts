@@ -1,5 +1,6 @@
 
-import { AppInstance, LogEntry, InstanceStatus, ScheduledJob, ScheduleStatus, BusinessImpact, ExceptionInstance, SystemRequest } from '../types';
+
+import { AppInstance, LogEntry, InstanceStatus, ScheduledJob, ScheduleStatus, BusinessImpact, ExceptionInstance, SystemRequest, AuditEventType, User, AuditEvent } from '../types';
 import { mockAppInstances, mockScheduledJobs, mockExceptionInstances, detailedExceptionInstance, mockSystemRequest } from '../constants';
 
 // Simulate network latency
@@ -134,41 +135,109 @@ export const getLogsForTask = (instanceId: string, taskId: string): Promise<LogE
     });
 };
 
-export const postInstanceAction = (instanceId: string, taskId: string, action: 'resume' | 'cancel' | 'skip', reason?: string): Promise<{ success: boolean; message: string }> => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            console.log(`Action: ${action} on instance ${instanceId}, task ${taskId}. Reason: ${reason || 'N/A'}`);
-            
-            if (action === 'resume') {
-                const instance = mockAppInstances.find(inst => inst.id === instanceId);
-                if (instance) {
-                   instance.status = InstanceStatus.IN_PROGRESS;
-                   const failedTask = instance.tasks.find(t => t.status === InstanceStatus.FAILED);
-                   if(failedTask) {
-                       failedTask.status = InstanceStatus.IN_PROGRESS;
-                       failedTask.retryAttempts += 1;
-                       instance.retryCount += 1;
-                   }
-                }
-            } else if (action === 'cancel') {
-                const instance = mockAppInstances.find(inst => inst.id === instanceId);
-                if (instance) instance.status = InstanceStatus.FAILED; // Or a new "Cancelled" status
-            }
+interface PostActionOptions {
+  instanceId: string;
+  taskId: string;
+  action: AuditEventType;
+  user: User;
+  reason?: string;
+  skipCount?: number;
+}
 
-            resolve({ success: true, message: `Action '${action}' initiated successfully.` });
-        }, LATENCY);
-    });
+export const postInstanceAction = (options: PostActionOptions): Promise<{ success: boolean; message: string; updatedInstance: AppInstance }> => {
+  const { instanceId, taskId, action, user, reason, skipCount } = options;
+  
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const instanceIndex = mockAppInstances.findIndex(inst => inst.id === instanceId);
+      if (instanceIndex === -1) {
+        return reject({ success: false, message: 'Instance not found' });
+      }
+      
+      const instance = JSON.parse(JSON.stringify(mockAppInstances[instanceIndex]));
+      const task = instance.tasks.find((t: any) => t.id === taskId);
+      
+      if (!task) {
+        return reject({ success: false, message: 'Task not found' });
+      }
+
+      // Create and add the audit event
+      const auditEvent: AuditEvent = {
+        type: action,
+        user: user.name,
+        timestamp: new Date().toISOString(),
+        taskId: task.id,
+        taskName: task.name,
+        details: {},
+      };
+
+      // Perform action-specific state changes
+      switch (action) {
+        case 'Resume':
+          instance.status = InstanceStatus.IN_PROGRESS;
+          auditEvent.details!.preRetryCount = task.retryAttempts;
+          task.status = InstanceStatus.IN_PROGRESS;
+          task.retryAttempts += 1;
+          instance.retryCount += 1;
+          break;
+        case 'Cancel':
+          instance.status = InstanceStatus.CANCELLED;
+          instance.cancellationDetails = {
+              reason: reason || 'No reason provided.',
+              user: user.name,
+              timestamp: new Date().toISOString(),
+          };
+          auditEvent.details!.reason = reason;
+          break;
+        case 'Skip':
+          // For simplicity, we'll mark the task as successful and let the instance continue.
+          // In a real scenario, this would trigger more complex logic.
+          task.status = InstanceStatus.SUCCESS;
+          const failedIndex = instance.tasks.findIndex((t:any) => t.status === InstanceStatus.FAILED);
+          if (failedIndex === -1) { // If this was the last failed task
+             instance.status = InstanceStatus.IN_PROGRESS; // or logic to check if it's now completed
+          }
+          auditEvent.details!.skipCount = skipCount;
+          auditEvent.details!.reason = reason;
+          break;
+      }
+
+      if (!instance.auditTrail) {
+        instance.auditTrail = [];
+      }
+      instance.auditTrail.push(auditEvent);
+      
+      // Update the mock data source
+      mockAppInstances[instanceIndex] = instance;
+
+      resolve({ success: true, message: `Action '${action}' initiated successfully.`, updatedInstance: instance });
+    }, LATENCY);
+  });
 };
 
-export const notifySre = (instanceId: string): Promise<{ success: boolean }> => {
-    return new Promise(resolve => {
+
+export const notifySre = (instanceId: string): Promise<{ success: boolean, updatedInstance: AppInstance }> => {
+    return new Promise((resolve, reject) => {
         setTimeout(() => {
-            const instance = mockAppInstances.find(inst => inst.id === instanceId);
-            if (instance) {
-                instance.isNotified = true;
-                console.log(`SaaS SRE notified for instance ${instanceId}`);
+            const instanceIndex = mockAppInstances.findIndex(inst => inst.id === instanceId);
+            if (instanceIndex === -1) {
+                return reject({ success: false, message: "Instance not found" });
             }
-            resolve({ success: true });
+            const instance = mockAppInstances[instanceIndex];
+            instance.isNotified = true;
+            
+            const auditEvent: AuditEvent = {
+                type: 'Notify',
+                user: 'System', // Or the current user if they triggered it
+                timestamp: new Date().toISOString(),
+            };
+            if (!instance.auditTrail) {
+                instance.auditTrail = [];
+            }
+            instance.auditTrail.push(auditEvent);
+            
+            console.log(`SaaS SRE notified for instance ${instanceId}`);
+            resolve({ success: true, updatedInstance: JSON.parse(JSON.stringify(instance)) });
         }, LATENCY);
     });
 };

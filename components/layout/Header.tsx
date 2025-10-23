@@ -10,6 +10,7 @@ interface HeaderProps {
   onSwitchUser: () => void;
   onNavigateHome: () => void;
   isDashboardView: boolean;
+  activeWorkbench: 'olympus-hub-saas' | 'next-orbit-saas' | null;
 }
 
 const OpsCenterLogo = () => (
@@ -33,7 +34,7 @@ const ChevronDownIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500 ml-2"><path d="m6 9 6 6 6-6"></path></svg>
 );
 
-const Header: React.FC<HeaderProps> = ({ user, zone, zones, onZoneChange, onSwitchUser, onNavigateHome, isDashboardView }) => {
+const Header: React.FC<HeaderProps> = ({ user, zone, zones, onZoneChange, onSwitchUser, onNavigateHome, isDashboardView, activeWorkbench }) => {
   const [isZoneOpen, setIsZoneOpen] = useState(false);
   const [zoneSearch, setZoneSearch] = useState('');
   const zoneRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,8 @@ const Header: React.FC<HeaderProps> = ({ user, zone, zones, onZoneChange, onSwit
     z.name.toLowerCase().includes(zoneSearch.toLowerCase())
   );
 
+  const workbenchTitle = activeWorkbench === 'next-orbit-saas' ? 'Next Orbit SaaS' : 'Olympus Hub SaaS';
+
   return (
     <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-6 shrink-0">
       <div>
@@ -59,7 +62,7 @@ const Header: React.FC<HeaderProps> = ({ user, zone, zones, onZoneChange, onSwit
           <div className="flex items-center space-x-2">
               <button onClick={onNavigateHome} className="text-xl font-semibold text-slate-500 hover:text-slate-800 transition-colors">OPS Center</button>
               <span className="text-xl text-slate-400">/</span>
-              <h1 className="text-xl font-semibold text-slate-800">Olympus Hub SaaS <span className="text-sm font-normal text-sky-600 ml-2">Workbench</span></h1>
+              <h1 className="text-xl font-semibold text-slate-800">{workbenchTitle} <span className="text-sm font-normal text-sky-600 ml-2">Workbench</span></h1>
           </div>
         ) : (
           <div className="flex items-center">
@@ -80,12 +83,13 @@ const Header: React.FC<HeaderProps> = ({ user, zone, zones, onZoneChange, onSwit
               <div className="p-2 border-b border-slate-200">
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder="Search zones..."
                   value={zoneSearch}
                   onChange={(e) => setZoneSearch(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-500"
                   autoFocus
                 />
+                <p className="text-xs text-slate-500 mt-2 text-center">Select a Zone to continue.</p>
               </div>
               <div className="py-1 max-h-60 overflow-y-auto">
                 {filteredZones.map((z) => (
