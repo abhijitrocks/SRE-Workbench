@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppInstance, User, UserRole, Zone, InstanceStatus, ExceptionType, ScheduledJob, ExceptionInstance } from './types';
-import { mockUsers, mockZones } from './constants';
+import { AppInstance, User, UserRole, Zone, InstanceStatus, ExceptionType, ScheduledJob, ExceptionInstance, Tenant } from './types';
+import { mockUsers, mockZones, mockTenants } from './constants';
 import { getInstances, getSchedules, getExceptionInstances, getExceptionInstance } from './services/apiService';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -11,21 +11,21 @@ import ExceptionsDashboard from './components/exceptions/ExceptionsDashboard';
 import ExceptionDetailView from './components/exceptions/ExceptionDetailView';
 import TaskDetailView from './components/task/TaskDetailView';
 
-const userCycleOrder = [
-  mockUsers.saasSre,
-  mockUsers.electronSre,
-  mockUsers.tachyonSre,
-  mockUsers.itpSre,
-  mockUsers.rubySre,
-  mockUsers.platformSre,
-];
+const OpsCenterLogo = () => (
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-3">
+        {/* Dark Blue Shape */}
+        <path d="M22.9416 5.14355C25.9221 6.11183 28.3882 8.57791 29.3564 11.5584C30.292 14.4363 29.6534 17.6186 27.653 19.9987C28.5218 22.9531 27.7538 26.2483 25.6843 28.3177C23.6149 30.3871 20.3197 31.1552 17.3653 30.2864C14.4109 29.4175 11.4939 30.015 9.11379 28.0146C6.73371 26.0142 6.13619 23.0972 7.00504 20.1428C6.13619 17.1883 6.90423 13.8931 8.97368 11.8237C11.0431 9.75425 14.3383 8.98621 17.2928 9.85506C18.261 6.87458 20.6276 4.4085 22.9416 5.14355Z" fill="#3A4D8F"/>
+        {/* Pink Shape */}
+        <path d="M28.4111 20.9167C29.8333 21.5057 30.9023 22.8278 31.3368 24.3822C31.758 25.8829 31.4283 27.5253 30.4504 28.7891C30.8394 30.2253 30.5097 31.7897 29.5418 32.9645C28.5739 34.1393 27.0195 34.6338 25.6833 34.1993C24.3472 33.7648 22.8129 34.0438 21.6381 33.1759C20.4633 32.308 20.1336 30.8718 20.4731 29.5357C20.1336 28.1995 20.4026 26.7433 21.2705 25.5685C22.1384 24.3937 23.4605 23.8592 24.8827 24.2837C25.4717 22.8615 26.8828 21.7925 28.4111 20.9167Z" fill="#EC4899"/>
+    </svg>
+);
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'workbenches' | 'dashboard'>('workbenches');
   const [activeWorkbench, setActiveWorkbench] = useState<'olympus-hub-saas' | 'next-orbit-saas' | null>(null);
   const [activeConsole, setActiveConsole] = useState('File Processing');
-  const [currentUser, setCurrentUser] = useState<User>(mockUsers.saasSre);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentZone, setCurrentZone] = useState<Zone>(mockZones[0]);
+  const [currentTenant, setCurrentTenant] = useState<Tenant>(mockTenants[0]);
   
   const [instances, setInstances] = useState<AppInstance[]>([]);
   const [scheduledJobs, setScheduledJobs] = useState<ScheduledJob[]>([]);
@@ -62,41 +62,44 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (currentView === 'dashboard') {
+    if (currentUser) {
       fetchData();
     }
-  }, [currentView, fetchData]);
+  }, [currentUser, fetchData]);
 
   useEffect(() => {
-    // Filter Instances
-    let filteredInst = instances.filter(inst => inst.zone === currentZone.id);
-    
-    if (activeWorkbench === 'next-orbit-saas') {
-      filteredInst = filteredInst.filter(inst => inst.saas === 'Next Orbit');
+    if (!currentUser) {
+      setFilteredInstances([]);
+      setFilteredScheduledJobs([]);
+      return;
     }
 
+    // Base filtering by zone first
+    let tempInstances = instances.filter(inst => inst.zone === currentZone.id);
+    let tempSchedules = scheduledJobs.filter(job => job.zone === currentZone.id);
+
+    // Conditionally filter by tenant if "All tenants" is not selected
+    if (currentTenant.id !== 'all') {
+      tempInstances = tempInstances.filter(inst => inst.tenantId === currentTenant.id);
+      tempSchedules = tempSchedules.filter(job => job.tenantId === currentTenant.id);
+    }
+    
     if (currentUser.role === UserRole.SAAS_SRE) {
-      // SaaS SREs should see all their instances except for FAILED ones that are classified as SYSTEM exceptions.
-      // This includes SUCCESS, IN_PROGRESS, PENDING, FAILED (Business), and FAILED (Unclassified).
-      filteredInst = filteredInst.filter(inst => 
+      // SaaS SREs view is scoped to their assigned SaaS and business-related exceptions.
+      tempInstances = tempInstances.filter(inst => 
         inst.saas === currentUser.saas && inst.exceptionType !== ExceptionType.SYSTEM
       );
-    }
-    setFilteredInstances(filteredInst);
-    
-    // Filter Schedules
-    let filteredSched = scheduledJobs.filter(job => job.zone === currentZone.id);
-    
-    if (activeWorkbench === 'next-orbit-saas') {
-        filteredSched = filteredSched.filter(job => job.saas === 'Next Orbit');
+      tempSchedules = tempSchedules.filter(job => job.saas === currentUser.saas);
+    } else if (currentUser.role === UserRole.PLATFORM_SRE) {
+      // Platform SREs have a global view of all instances within the selected context.
+      // No additional filtering is needed beyond the base filters.
+      // This explicit block clarifies the logic.
     }
 
-    if (currentUser.role === UserRole.SAAS_SRE) {
-        filteredSched = filteredSched.filter(job => job.saas === currentUser.saas);
-    }
-    setFilteredScheduledJobs(filteredSched);
+    setFilteredInstances(tempInstances);
+    setFilteredScheduledJobs(tempSchedules);
 
-  }, [instances, scheduledJobs, currentZone, currentUser, activeWorkbench]);
+  }, [instances, scheduledJobs, currentZone, currentTenant, currentUser, activeWorkbench]);
 
   const handleSelectInstance = (instance: AppInstance | null) => {
     if (instance) {
@@ -150,31 +153,23 @@ const App: React.FC = () => {
     setScheduledJobs(prev => prev.map(job => job.id === updatedSchedule.id ? updatedSchedule : job));
   };
 
-
-  const switchUser = () => {
-    setCurrentUser(prevUser => {
-      const currentIndex = userCycleOrder.findIndex(u => u.id === prevUser.id);
-      const nextIndex = (currentIndex !== -1 ? currentIndex + 1 : 1) % userCycleOrder.length;
-      return userCycleOrder[nextIndex];
-    });
-    setSelectedInstance(null);
-    setSelectedException(null);
-    setSelectedTaskViewData(null);
-  };
-
   const handleSelectWorkbench = (workbenchId: string) => {
-    if (workbenchId === 'olympus-hub-saas' || workbenchId === 'next-orbit-saas') {
-      setActiveWorkbench(workbenchId as 'olympus-hub-saas' | 'next-orbit-saas');
-      setCurrentView('dashboard');
+    if (workbenchId === 'olympus-hub-saas') {
+      setActiveWorkbench('olympus-hub-saas');
+      setCurrentUser(mockUsers.platformSre);
+    } else if (workbenchId === 'next-orbit-saas') {
+      setActiveWorkbench('next-orbit-saas');
+      setCurrentUser(mockUsers.saasSre);
     }
   };
 
-  const navigateToWorkbenches = () => {
-    setCurrentView('workbenches');
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setActiveWorkbench(null);
     setSelectedInstance(null);
     setSelectedException(null);
     setSelectedTaskViewData(null);
-    setActiveWorkbench(null);
+    setActiveConsole('File Processing');
   };
 
   const renderDashboard = () => {
@@ -187,7 +182,7 @@ const App: React.FC = () => {
             onSelectInstance={handleSelectInstance}
             loading={loading}
             error={error}
-            currentUser={currentUser}
+            currentUser={currentUser!}
             onUpdateInstance={handleUpdateInstance}
             onUpdateSchedule={handleUpdateSchedule}
             onAddInstance={handleAddInstance}
@@ -206,31 +201,45 @@ const App: React.FC = () => {
         return null;
     }
   }
+  
+  if (!currentUser) {
+    return (
+      <div className="h-screen font-sans bg-slate-100 flex flex-col">
+        <header className="bg-white border-b border-slate-200 h-16 flex items-center px-4 md:px-6 shrink-0">
+          <div className="flex items-center">
+            <OpsCenterLogo />
+            <span className="text-xl font-semibold text-slate-800 tracking-wider">OPERATIONS CENTER</span>
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex items-center justify-center">
+             <div className="max-w-7xl mx-auto w-full">
+                <WorkbenchesView onSelectWorkbench={handleSelectWorkbench} />
+             </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen font-sans flex bg-slate-100">
-      {currentView === 'dashboard' && <Sidebar onNavigate={navigateToWorkbenches} activeConsole={activeConsole} onConsoleChange={setActiveConsole} activeWorkbench={activeWorkbench} />}
+      <Sidebar onNavigate={handleLogout} activeConsole={activeConsole} onConsoleChange={setActiveConsole} activeWorkbench={activeWorkbench} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header 
           user={currentUser} 
           zone={currentZone} 
           zones={mockZones} 
           onZoneChange={setCurrentZone}
-          onSwitchUser={switchUser}
-          onNavigateHome={navigateToWorkbenches}
-          isDashboardView={currentView === 'dashboard'}
+          tenant={currentTenant}
+          tenants={mockTenants}
+          onTenantChange={setCurrentTenant}
+          onNavigateHome={handleLogout}
           activeWorkbench={activeWorkbench}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          {currentView === 'workbenches' && (
-             <div className="max-w-7xl mx-auto">
-                <WorkbenchesView onSelectWorkbench={handleSelectWorkbench} />
-             </div>
-          )}
-          {currentView === 'dashboard' && renderDashboard()}
+          {renderDashboard()}
         </main>
       </div>
-      {currentView === 'dashboard' && selectedInstance && (
+      {selectedInstance && (
         <InstanceDetailView 
           instance={selectedInstance} 
           onClose={() => handleSelectInstance(null)} 
@@ -239,14 +248,14 @@ const App: React.FC = () => {
           onSelectException={handleSelectException}
         />
       )}
-      {currentView === 'dashboard' && selectedException && (
+      {selectedException && (
         <ExceptionDetailView
           exception={selectedException}
           onClose={() => handleSelectException(null)}
           onShowTaskDetailView={handleShowTaskDetailView}
         />
       )}
-      {currentView === 'dashboard' && selectedTaskViewData && (
+      {selectedTaskViewData && (
           <TaskDetailView 
             data={selectedTaskViewData}
             onClose={handleCloseTaskDetailView}
@@ -276,12 +285,12 @@ const WorkbenchCard: React.FC<{ title: string; description: string; id: string; 
 
 const WorkbenchesView: React.FC<{onSelectWorkbench: (workbenchId: string) => void;}> = ({ onSelectWorkbench }) => {
   const workbenches = [
-    { id: 'WBHINZZ0013', title: 'Olympus Hub SaaS', description: 'Discover, diagnose, and remediate failed file application instances.', icon: <BriefcaseIconWB />, handler: () => onSelectWorkbench('olympus-hub-saas'), disabled: false, },
-    { id: 'WBHINZZ0014', title: 'Next Orbit SaaS', description: 'Dedicated workbench for Next Orbit specific workflows and instances.', icon: <BriefcaseIconWB />, handler: () => onSelectWorkbench('next-orbit-saas'), disabled: false, },
+    { id: 'WBHINZZ0013', title: 'Olympus Hub SaaS', description: 'Enter as an Olympus Hub SRE to manage system-level exceptions and platform health.', icon: <BriefcaseIconWB />, handler: () => onSelectWorkbench('olympus-hub-saas'), disabled: false, },
+    { id: 'WBHINZZ0014', title: 'Next Orbit SaaS', description: 'Enter as a Next Orbit SRE to manage business exceptions for your dedicated SaaS.', icon: <BriefcaseIconWB />, handler: () => onSelectWorkbench('next-orbit-saas'), disabled: false, },
   ];
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Workbenches ({workbenches.filter(w => !w.disabled).length})</h1>
+      <h1 className="text-2xl font-bold text-slate-800 mb-6">Select a Workbench</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {workbenches.map(wb => ( <WorkbenchCard key={wb.id} {...wb} onClick={wb.handler} /> ))}
       </div>

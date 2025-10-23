@@ -1,5 +1,7 @@
 
 
+
+
 import { AppInstance, LogEntry, InstanceStatus, ScheduledJob, ScheduleStatus, BusinessImpact, ExceptionInstance, SystemRequest, AuditEventType, User, AuditEvent } from '../types';
 import { mockAppInstances, mockScheduledJobs, mockExceptionInstances, detailedExceptionInstance, mockSystemRequest } from '../constants';
 
@@ -261,6 +263,21 @@ export const acknowledgeSchedule = (scheduleId: string, reason: string): Promise
     });
 }
 
+const getWorkbenchName = (saas: string): string => {
+  switch (saas) {
+    case 'Next Orbit':
+    case 'Electron':
+    case 'Ruby':
+      return 'Benefit processing Workbench';
+    case 'Tachyon Credit':
+      return 'Revolving credit account workbench';
+    case 'ITP SaaS':
+      return 'ITP workbench';
+    default:
+      return 'Benefit processing Workbench';
+  }
+};
+
 export const triggerScheduleNow = (scheduleId: string, reason: string): Promise<{ success: true, newInstance: AppInstance, updatedSchedule: ScheduledJob }> => {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -274,8 +291,10 @@ export const triggerScheduleNow = (scheduleId: string, reason: string): Promise<
                 id: `manual-trig-${Date.now().toString().slice(-6)}`,
                 fileName: `Manual run of ${schedule.name}`,
                 saas: schedule.saas,
+                tenantId: schedule.tenantId,
                 zone: schedule.zone,
                 applicationName: schedule.applicationName,
+                customerWorkbench: getWorkbenchName(schedule.saas),
                 status: InstanceStatus.IN_PROGRESS,
                 tasks: [],
                 totalTasks: 8, // Example value

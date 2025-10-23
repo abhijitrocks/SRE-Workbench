@@ -44,6 +44,7 @@ const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClo
   };
 
   const showNotifyButton = user.role === UserRole.PLATFORM_SRE && instance.status === InstanceStatus.FAILED && instance.exceptionType === ExceptionType.BUSINESS;
+  const isPlatformSreOnBusinessException = user.role === UserRole.PLATFORM_SRE && instance.exceptionType === ExceptionType.BUSINESS;
 
   return (
     <>
@@ -79,7 +80,17 @@ const InstanceDetailView: React.FC<InstanceDetailViewProps> = ({ instance, onClo
                 </button>
              )}
              {!isSuccess && !isCancelled && (
-                <ActionsDropdown instance={instance} user={user} onActionClick={(action) => setModalOpen(action)} />
+                <ActionsDropdown
+                  instance={instance}
+                  user={user}
+                  onActionClick={(action) => setModalOpen(action)}
+                  disabled={isPlatformSreOnBusinessException}
+                  disabledTooltip={
+                    isPlatformSreOnBusinessException
+                      ? "Platform SREs cannot take action on Business Exceptions."
+                      : undefined
+                  }
+                />
             )}
             <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200 text-slate-500"><XIcon /></button>
           </div>

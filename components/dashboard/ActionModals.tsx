@@ -8,7 +8,9 @@ export const ActionsDropdown: React.FC<{
   instance: AppInstance;
   user: User;
   onActionClick: (action: 'Resume' | 'Cancel' | 'Skip') => void;
-}> = ({ instance, user, onActionClick }) => {
+  disabled?: boolean;
+  disabledTooltip?: string;
+}> = ({ instance, user, onActionClick, disabled = false, disabledTooltip }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -33,15 +35,17 @@ export const ActionsDropdown: React.FC<{
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center bg-sky-600 hover:bg-sky-700 text-white font-medium px-4 py-2 rounded-md text-sm transition-colors shadow-sm"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`flex items-center bg-sky-600 text-white font-medium px-4 py-2 rounded-md text-sm transition-colors shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-sky-700'}`}
         aria-haspopup="true"
         aria-expanded={isOpen}
+        disabled={disabled}
+        title={disabled ? disabledTooltip : 'Perform an action'}
       >
         Actions
         <ChevronDownIcon className="ml-2 h-4 w-4" />
       </button>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
           <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
             <button

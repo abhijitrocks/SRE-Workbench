@@ -1,3 +1,4 @@
+
 export enum UserRole {
   SAAS_SRE = 'SaaS SRE',
   PLATFORM_SRE = 'Olympus Hub SRE',
@@ -12,6 +13,11 @@ export interface User {
 }
 
 export interface Zone {
+  id: string;
+  name: string;
+}
+
+export interface Tenant {
   id: string;
   name: string;
 }
@@ -117,6 +123,7 @@ export interface AppInstance {
   id: string;
   fileName: string;
   saas: string;
+  tenantId: string;
   zone: string;
   applicationName: string; // This will be used as "Folder"
   status: InstanceStatus;
@@ -127,6 +134,7 @@ export interface AppInstance {
   lastUpdatedAt: string;
   retryCount: number;
   businessImpact: BusinessImpact;
+  customerWorkbench?: string;
   failedTaskIndex?: number;
   exceptionType?: ExceptionType;
   exceptionCode?: string;
@@ -163,6 +171,7 @@ export interface ScheduledJob {
   name: string;
   applicationName: string;
   saas: string;
+  tenantId: string;
   zone: string;
   cronExpression: string; // e.g., '0 2 * * *'
   lastRun?: {

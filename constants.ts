@@ -1,4 +1,5 @@
-import { AppInstance, InstanceStatus, User, UserRole, Zone, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest } from './types';
+
+import { AppInstance, InstanceStatus, User, UserRole, Zone, Tenant, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest } from './types';
 import { allSops } from './constants/exceptions';
 
 export const mockUsers: { [key: string]: User } = {
@@ -73,6 +74,27 @@ export const mockZones: Zone[] = [
   { id: 'azure-westus-2', name: 'Azure West-US-2' },
 ];
 
+export const mockTenants: Tenant[] = [
+  { id: 'all', name: 'All tenants' },
+  { id: 'mondo', name: 'Mondo' },
+  { id: 'perf-test-tenant-05', name: 'Performance Test Tenant 05' },
+];
+
+const getWorkbenchName = (saas: string): string => {
+  switch (saas) {
+    case 'Next Orbit':
+    case 'Electron':
+    case 'Ruby':
+      return 'Benefit processing Workbench';
+    case 'Tachyon Credit':
+      return 'Revolving credit account workbench';
+    case 'ITP SaaS':
+      return 'ITP workbench';
+    default:
+      return 'Benefit processing Workbench';
+  }
+};
+
 const generateMockInstances = (): AppInstance[] => {
   
   // Fix: Add explicit return type to provide contextual typing and prevent type widening on `processingStages`.
@@ -126,6 +148,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-biz-fail-next-orbit-1-cancelled',
       fileName: 'Beneficiary_EE_File_20250430_01_cancelled.csv',
       saas: 'Next Orbit',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.CANCELLED,
@@ -159,6 +182,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-biz-fail-electron-1-cancelled',
       fileName: 'Beneficiary_EE_File_20250429_01_old',
       saas: 'Electron',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.CANCELLED,
@@ -183,7 +207,7 @@ const generateMockInstances = (): AppInstance[] => {
     {
       id: 'ee-sys-fail-jardownload-8u9i-cancelled',
       fileName: 'Beneficiary_EE_File_20250428_06_old',
-      saas: 'Next Orbit', zone: 'azure-westus-2', applicationName: 'enrollment-eligibility',
+      saas: 'Next Orbit', tenantId: 'perf-test-tenant-05', zone: 'azure-westus-2', applicationName: 'enrollment-eligibility',
       status: InstanceStatus.CANCELLED,
       cancellationDetails: {
           reason: 'Artifactory was down for maintenance (INC-54321). The job window was missed. Will be re-run in the next cycle.',
@@ -210,6 +234,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'fail-no-exception-next-orbit-1',
       fileName: 'Unclassified_Failure_NO_20250430.csv',
       saas: 'Next Orbit',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -229,6 +254,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'fail-no-exception-electron-1',
       fileName: 'Unclassified_Failure_ELEC_20250430.xml',
       saas: 'Electron',
+      tenantId: 'perf-test-tenant-05',
       zone: 'aws-us-east-1',
       applicationName: 'Humana_ClaimsProcessing',
       status: InstanceStatus.FAILED,
@@ -253,6 +279,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-biz-fail-electron-1',
       fileName: 'Beneficiary_EE_File_20250429_01',
       saas: 'Electron',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -275,6 +302,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-biz-fail-tachyon-1',
       fileName: 'Beneficiary_EE_File_20250429_02',
       saas: 'Tachyon Credit',
+      tenantId: 'perf-test-tenant-05',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -297,6 +325,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-biz-fail-itp-1',
       fileName: 'Beneficiary_EE_File_20250429_03',
       saas: 'ITP SaaS',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -319,6 +348,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-biz-fail-ruby-1',
       fileName: 'Beneficiary_EE_File_20250429_04',
       saas: 'Ruby',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -341,7 +371,7 @@ const generateMockInstances = (): AppInstance[] => {
     {
       id: 'ee-biz-fail-schema-4h5j-6k7l',
       fileName: 'Beneficiary_EE_File_20250428_04',
-      saas: 'Next Orbit', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
+      saas: 'Next Orbit', tenantId: 'perf-test-tenant-05', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
       totalTasks: 9, completedTasks: 5, failedTaskIndex: 5,
       startedAt: '2025-04-28T14:00:00Z', lastUpdatedAt: '2025-04-28T14:06:00Z',
@@ -362,7 +392,7 @@ const generateMockInstances = (): AppInstance[] => {
     {
       id: 'ee-biz-fail-header-1a2b-3c4d',
       fileName: 'Beneficiary_EE_File_20250428_08',
-      saas: 'Next Orbit', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
+      saas: 'Next Orbit', tenantId: 'mondo', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
       totalTasks: 9, completedTasks: 3, failedTaskIndex: 3,
       startedAt: '2025-04-28T18:00:00Z', lastUpdatedAt: '2025-04-28T18:01:15Z',
@@ -383,7 +413,7 @@ const generateMockInstances = (): AppInstance[] => {
     {
       id: 'ee-biz-fail-conflict-9p8o-7i6u',
       fileName: 'Beneficiary_EE_File_20250428_09',
-      saas: 'Next Orbit', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
+      saas: 'Next Orbit', tenantId: 'perf-test-tenant-05', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
       totalTasks: 9, completedTasks: 6, failedTaskIndex: 6,
       startedAt: '2025-04-28T19:00:00Z', lastUpdatedAt: '2025-04-28T19:12:00Z',
@@ -405,7 +435,7 @@ const generateMockInstances = (): AppInstance[] => {
     {
       id: 'ee-sys-fail-filenotfound-5t6y',
       fileName: 'Beneficiary_EE_File_20250428_05',
-      saas: 'Next Orbit', zone: 'gcp-us-central1', applicationName: 'enrollment-eligibility',
+      saas: 'Next Orbit', tenantId: 'mondo', zone: 'gcp-us-central1', applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
       totalTasks: 9, completedTasks: 2, failedTaskIndex: 2,
       startedAt: '2025-04-28T15:00:00Z', lastUpdatedAt: '2025-04-28T15:02:30Z',
@@ -424,7 +454,7 @@ const generateMockInstances = (): AppInstance[] => {
     {
       id: 'ee-sys-fail-jardownload-8u9i',
       fileName: 'Beneficiary_EE_File_20250428_06',
-      saas: 'Next Orbit', zone: 'azure-westus-2', applicationName: 'enrollment-eligibility',
+      saas: 'Next Orbit', tenantId: 'perf-test-tenant-05', zone: 'azure-westus-2', applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
       totalTasks: 9, completedTasks: 5, failedTaskIndex: 5,
       startedAt: '2025-04-28T16:00:00Z', lastUpdatedAt: '2025-04-28T16:05:00Z',
@@ -443,7 +473,7 @@ const generateMockInstances = (): AppInstance[] => {
     {
       id: 'ee-sys-fail-sql-3e4r-5t6y',
       fileName: 'Beneficiary_EE_File_20250428_07',
-      saas: 'Next Orbit', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
+      saas: 'Next Orbit', tenantId: 'mondo', zone: 'aws-us-east-1', applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
       totalTasks: 9, completedTasks: 4, failedTaskIndex: 4,
       startedAt: '2025-04-28T17:00:00Z', lastUpdatedAt: '2025-04-28T17:02:00Z',
@@ -480,6 +510,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-biz-fail-1-a1b2-c3d4-e5f6',
       fileName: 'Beneficiary_EE_File_20250427_01',
       saas: 'Next Orbit',
+      tenantId: 'perf-test-tenant-05',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -503,6 +534,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-sys-fail-1-b2c3-d4e5-f6g7',
       fileName: 'Beneficiary_EE_File_20250427_02',
       saas: 'Next Orbit',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -524,6 +556,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'ee-sys-fail-2-c3d4-e5f6-g7h8',
       fileName: 'Beneficiary_EE_File_20250427_03',
       saas: 'Next Orbit',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'enrollment-eligibility',
       status: InstanceStatus.FAILED,
@@ -551,6 +584,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'sys-fail-1-a1b2-c3d4-e5f6-g7h8i9j0k1l2',
       fileName: 'EDI_837_Claims_20250426',
       saas: 'Next Orbit', // Matches default user
+      tenantId: 'mondo',
       zone: 'aws-us-east-1', // Matches default zone
       applicationName: 'Humana_ClaimsProcessing',
       status: InstanceStatus.FAILED,
@@ -579,6 +613,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'biz-fail-2-b2c3-d4e5-f6g7-h8i9j0k1l2m3',
       fileName: 'Member_Roster_Update_April',
       saas: 'Next Orbit', // Matches default user
+      tenantId: 'perf-test-tenant-05',
       zone: 'aws-us-east-1', // Matches default zone
       applicationName: 'Humana_Eligibility',
       status: InstanceStatus.FAILED,
@@ -608,6 +643,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'a7c8e9f0-b2d3-4c5e-8a9b-1d2e3f4a5b6c',
       fileName: 'Beneficiary File_270225',
       saas: 'Next Orbit',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'Humana_Enrollment&PlanParticipation',
       status: InstanceStatus.IN_PROGRESS,
@@ -632,6 +668,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'b3d4e5f6-c7a8-4b9d-a1b2-c3d4e5f6a7b8',
       fileName: 'Beneficiary File_250225',
       saas: 'Next Orbit',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'Humana_Enrollment&PlanParticipation',
       status: InstanceStatus.PENDING,
@@ -647,6 +684,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a',
       fileName: 'Beneficiary File_010125',
       saas: 'Next Orbit',
+      tenantId: 'perf-test-tenant-05',
       zone: 'gcp-us-central1',
       applicationName: 'Humana_Enrollment&PlanParticipation',
       status: InstanceStatus.FAILED,
@@ -674,6 +712,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'c8d9e0f1-a2b3-4c5d-8e9f-0a1b2c3d4e5f',
       fileName: 'Beneficiary File_140224',
       saas: 'Tachyon Credit',
+      tenantId: 'mondo',
       zone: 'gcp-us-central1',
       applicationName: 'Humana_AdhocIssuance',
       status: InstanceStatus.SUCCESS,
@@ -717,6 +756,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'e6f7a8b9-c0d1-4e2f-8a3b-4c5d6e7f8a9b',
       fileName: 'Beneficiary File_030125',
       saas: 'ITP SaaS',
+      tenantId: 'perf-test-tenant-05',
       zone: 'azure-westus-2',
       applicationName: 'Humana_AdhocIssuance',
       status: InstanceStatus.SUCCESS,
@@ -733,6 +773,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
       fileName: 'Beneficiary File_040125',
       saas: 'Ruby',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'Humana_AdhocIssuance',
       status: InstanceStatus.SUCCESS,
@@ -749,6 +790,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'g5h6i7j8-k9l0-4m1n-2o3p-4q5r6s7t8u9v',
       fileName: 'Beneficiary File_050125',
       saas: 'Electron',
+      tenantId: 'perf-test-tenant-05',
       zone: 'aws-us-east-1',
       applicationName: 'Humana_AdhocIssuance',
       status: InstanceStatus.SUCCESS,
@@ -765,6 +807,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'h1i2j3k4-l5m6-4n7o-8p9q-r1s2t3u4v5w6',
       fileName: 'Beneficiary File_060125',
       saas: 'Next Orbit',
+      tenantId: 'mondo',
       zone: 'gcp-us-central1',
       applicationName: 'Humana_Enrollment&PlanParticipation',
       status: InstanceStatus.SUCCESS,
@@ -781,6 +824,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'i3j4k5l6-m7n8-4o9p-0q1r-s2t3u4v5w6x7',
       fileName: 'Beneficiary File_070125',
       saas: 'Tachyon Credit',
+      tenantId: 'perf-test-tenant-05',
       zone: 'azure-westus-2',
       applicationName: 'Humana_AdhocIssuance',
       status: InstanceStatus.SUCCESS,
@@ -797,6 +841,7 @@ const generateMockInstances = (): AppInstance[] => {
       id: 'j4k5l6m7-n8o9-4p0q-1r2s-t3u4v5w6x7y8',
       fileName: 'Beneficiary File_080125',
       saas: 'ITP SaaS',
+      tenantId: 'mondo',
       zone: 'aws-us-east-1',
       applicationName: 'Humana_Enrollment&PlanParticipation',
       status: InstanceStatus.SUCCESS,
@@ -816,6 +861,7 @@ const generateMockInstances = (): AppInstance[] => {
     const randomSaas = ['Next Orbit', 'Electron', 'Tachyon Credit', 'ITP SaaS', 'Ruby'][i % 5];
     const randomZone = ['aws-us-east-1', 'gcp-us-central1', 'azure-westus-2'][i % 3];
     const randomFolder = ['Humana_Enrollment&PlanParticipation', 'Humana_AdhocIssuance'][i % 2];
+    const randomTenantId = mockTenants[i % mockTenants.length].id;
     const startDate = new Date(2025, 3, 15 - Math.floor(i / 5), 10 + (i%8), 30 + (i%30), 0);
     const endDate = new Date(startDate.getTime() + (5 + (i%10)) * 60000);
     const id = `m${i}-a1b2-4c3d-8e9f-0g1h2i3j4k5l`;
@@ -823,6 +869,7 @@ const generateMockInstances = (): AppInstance[] => {
       id,
       fileName: `Beneficiary File_${100125 + i}`,
       saas: randomSaas,
+      tenantId: randomTenantId,
       zone: randomZone,
       applicationName: randomFolder,
       status: InstanceStatus.SUCCESS,
@@ -840,7 +887,10 @@ const generateMockInstances = (): AppInstance[] => {
   return instances;
 }
 
-export const mockAppInstances: AppInstance[] = generateMockInstances();
+export const mockAppInstances: AppInstance[] = generateMockInstances().map(inst => ({
+    ...inst,
+    customerWorkbench: getWorkbenchName(inst.saas),
+}));
 
 // Get the current date and time
 const now = new Date();
@@ -856,6 +906,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Daily Recurring Payouts',
     applicationName: 'Humana_Payouts',
     saas: 'Next Orbit',
+    tenantId: 'mondo',
     zone: 'aws-us-east-1',
     cronExpression: '0 5 * * *', // Daily at 5 AM
     lastRun: {
@@ -870,6 +921,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'File Plan Termination (Initiated and Completed)',
     applicationName: 'Humana_Enrollment&PlanParticipation',
     saas: 'Next Orbit',
+    tenantId: 'mondo',
     zone: 'aws-us-east-1',
     cronExpression: '0 3 1 * *', // Monthly on the 1st
     lastRun: {
@@ -884,6 +936,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Payout Config ID Subscription Termination',
     applicationName: 'Humana_Config_Management',
     saas: 'Next Orbit',
+    tenantId: 'perf-test-tenant-05',
     zone: 'aws-us-east-1',
     cronExpression: '0 4 * * 1', // Weekly on Monday
     lastRun: {
@@ -898,6 +951,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Plan Change (Future Scheduled Item)',
     applicationName: 'Humana_Enrollment&PlanParticipation',
     saas: 'Next Orbit',
+    tenantId: 'mondo',
     zone: 'aws-us-east-1',
     cronExpression: '0 0 15 * *', // Monthly on the 15th
     nextExpectedRun: new Date('2025-05-15T00:00:00Z').toISOString(),
@@ -908,6 +962,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Card Issuance (1st December)',
     applicationName: 'Humana_AdhocIssuance',
     saas: 'Next Orbit',
+    tenantId: 'mondo',
     zone: 'gcp-us-central1', // Different zone for variety
     cronExpression: '0 8 1 12 *', // Annually on Dec 1st
     nextExpectedRun: new Date('2025-12-01T08:00:00Z').toISOString(),
@@ -918,6 +973,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Collateral Issuance (Scheduled in Advance)',
     applicationName: 'Humana_AdhocIssuance',
     saas: 'Next Orbit',
+    tenantId: 'perf-test-tenant-05',
     zone: 'aws-us-east-1',
     cronExpression: '0 10 20 * *', // Monthly on the 20th
     lastRun: {
@@ -932,6 +988,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Print File Generation and Sharing with Vendor',
     applicationName: 'Humana_Vendor_Integration',
     saas: 'Next Orbit',
+    tenantId: 'mondo',
     zone: 'aws-us-east-1',
     cronExpression: '0 22 * * 5', // Weekly on Friday
     lastRun: {
@@ -947,6 +1004,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Daily Humana Claims Processing',
     applicationName: 'Humana_ClaimsProcessing',
     saas: 'Next Orbit',
+    tenantId: 'mondo',
     zone: 'aws-us-east-1',
     cronExpression: '0 2 * * *', // Daily at 2 AM
     lastRun: {
@@ -962,6 +1020,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Hourly ITP SaaS Ad-hoc Issuance',
     applicationName: 'Humana_AdhocIssuance',
     saas: 'ITP SaaS',
+    tenantId: 'perf-test-tenant-05',
     zone: 'azure-westus-2',
     cronExpression: '0 * * * *', // Every hour
     lastRun: {
@@ -978,6 +1037,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Weekly Tachyon Credit Enrollment',
     applicationName: 'Humana_Enrollment&PlanParticipation',
     saas: 'Tachyon Credit',
+    tenantId: 'mondo',
     zone: 'gcp-us-central1',
     cronExpression: '0 0 * * 1', // Weekly on Monday
     lastRun: {
@@ -993,6 +1053,7 @@ export const mockScheduledJobs: ScheduledJob[] = [
     name: 'Nightly Ruby File Sync',
     applicationName: 'Humana_AdhocIssuance',
     saas: 'Ruby',
+    tenantId: 'perf-test-tenant-05',
     zone: 'aws-us-east-1',
     cronExpression: '30 1 * * *', // Daily at 1:30 AM
     lastRun: {
