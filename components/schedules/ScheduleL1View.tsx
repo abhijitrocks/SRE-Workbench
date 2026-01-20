@@ -15,7 +15,7 @@ interface ScheduleL1ViewProps {
 
 const ScheduleL1View: React.FC<ScheduleL1ViewProps> = ({ tenant, onSelectSchedule }) => {
   const [tenantFilter, setTenantFilter] = useState<string>('All');
-  const [nameFilter, setNameFilter] = useState<string>('');
+  const [nameFilter, setNameFilter] = useState<string>('All');
   
   // Date Filtering State
   const [startDate, setStartDate] = useState('');
@@ -24,7 +24,7 @@ const ScheduleL1View: React.FC<ScheduleL1ViewProps> = ({ tenant, onSelectSchedul
   const filteredSchedules = useMemo(() => {
     return mockScheduleDefinitions.filter(s => {
       const matchTenant = (tenant.id === 'all' || s.tenantId === tenant.id) && (tenantFilter === 'All' || s.tenantId === tenantFilter);
-      const matchName = s.name.toLowerCase().includes(nameFilter.toLowerCase());
+      const matchName = nameFilter === 'All' || s.name === nameFilter;
       return matchTenant && matchName;
     }).sort((a, b) => {
         // Sort OVERDUE to top to emphasize trigger failure use cases
@@ -62,9 +62,14 @@ const ScheduleL1View: React.FC<ScheduleL1ViewProps> = ({ tenant, onSelectSchedul
     return Array.from(ids).sort();
   }, []);
 
+  const availableNames = useMemo(() => {
+    const names = new Set(mockScheduleDefinitions.map(s => s.name));
+    return Array.from(names).sort();
+  }, []);
+
   const handleResetFilters = () => {
     setTenantFilter('All');
-    setNameFilter('');
+    setNameFilter('All');
     setStartDate('');
     setEndDate('');
   };
@@ -110,9 +115,9 @@ const ScheduleL1View: React.FC<ScheduleL1ViewProps> = ({ tenant, onSelectSchedul
                     <FilterIcon />
                     Registry Filters
                 </div>
-                {(tenantFilter !== 'All' || nameFilter) && (
+                {(tenantFilter !== 'All' || nameFilter !== 'All') && (
                     <button 
-                        onClick={() => { setTenantFilter('All'); setNameFilter(''); }}
+                        onClick={() => { setTenantFilter('All'); setNameFilter('All'); }}
                         className="text-[10px] font-black uppercase text-sky-600 hover:underline"
                     >
                         Reset Search
@@ -132,15 +137,16 @@ const ScheduleL1View: React.FC<ScheduleL1ViewProps> = ({ tenant, onSelectSchedul
                     ))}
                 </select>
                 
-                <div className="relative flex-grow max-w-[400px]">
-                    <input 
-                        type="text"
-                        placeholder="Filter by Schedule name..."
-                        value={nameFilter}
-                        onChange={(e) => setNameFilter(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-md px-4 py-1.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-sm"
-                    />
-                </div>
+                <select 
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-sm min-w-[240px]"
+                >
+                    <option value="All">All Schedules</option>
+                    {availableNames.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                    ))}
+                </select>
             </div>
         </div>
 
