@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AppInstance, InstanceStatus, FileAppSpec, User, UserRole, ExceptionType, AuditEventType } from '../../types';
 import { mockFileAppSpecs } from '../../constants';
 import StatusChip from '../ui/StatusChip';
@@ -142,7 +142,9 @@ const FoldersView: React.FC<{
     onJumpToInstances: (folder: string, status: InstanceStatus | 'All') => void;
     currentUser: User;
     onUpdateInstance: (instance: AppInstance) => void;
-}> = ({ instances, onSelectInstance, onJumpToInstances, currentUser, onUpdateInstance }) => {
+    initialAppName?: string | null;
+    onClearInitialApp?: () => void;
+}> = ({ instances, onSelectInstance, onJumpToInstances, currentUser, onUpdateInstance, initialAppName, onClearInitialApp }) => {
     const [selectedAppName, setSelectedAppName] = useState<string | null>(null);
     const [initialStatusFilter, setInitialStatusFilter] = useState<InstanceStatus | null>(null);
     const [ownerFilter, setOwnerFilter] = useState<string>('All');
@@ -169,9 +171,17 @@ const FoldersView: React.FC<{
         return groups;
     }, [instances]);
 
+    // Deep-link effect from main dashboard
+    useEffect(() => {
+      if (initialAppName && appRegistry[initialAppName]) {
+        setSelectedAppName(initialAppName);
+        // Clear it so navigation is only triggered once
+        onClearInitialApp?.();
+      }
+    }, [initialAppName, appRegistry, onClearInitialApp]);
+
     const availableOwners = useMemo(() => {
         const owners = new Set<string>();
-        // Fix: Explicitly typing the array from Object.values to avoid 'unknown' type error for 'owner' property
         (Object.values(appRegistry) as AppGroup[]).forEach(group => owners.add(group.owner));
         return Array.from(owners).sort();
     }, [appRegistry]);
@@ -337,7 +347,6 @@ export const L2AppDetailView: React.FC<{
     const spec = mockFileAppSpecs[appName];
     const [localFilter, setLocalFilter] = useState<InstanceStatus | null>(initialFilter);
 
-    // Modal state for direct actions in L2
     const [modalAction, setModalAction] = useState<AuditEventType | null>(null);
     const [activeInstance, setActiveInstance] = useState<AppInstance | null>(null);
 
@@ -485,7 +494,6 @@ export const L2AppDetailView: React.FC<{
                 </div>
             </div>
 
-            {/* Action Modals - Directly triggered from L2 */}
             {modalAction && activeInstance && (
                 <ActionModals
                     action={modalAction}

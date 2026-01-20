@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppInstance, User, UserRole, Zone, InstanceStatus, ExceptionType, ScheduledJob, ExceptionInstance, Tenant } from './types';
 import { mockUsers, mockZones, mockTenants } from './constants';
 import { getInstances, getSchedules, getExceptionInstances, getExceptionInstance } from './services/apiService';
@@ -12,12 +12,13 @@ import ExceptionDetailView from './components/exceptions/ExceptionDetailView';
 import TaskDetailView from './components/task/TaskDetailView';
 import FolderConsole from './components/folders/FolderConsole';
 import ScheduleConsole from './components/schedules/ScheduleConsole';
+import { L2AppDetailView, AppGroup } from './components/dashboard/FoldersView';
+
+const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 
 const OpsCenterLogo = () => (
     <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-3">
-        {/* Dark Blue Shape */}
         <path d="M22.9416 5.14355C25.9221 6.11183 28.3882 8.57791 29.3564 11.5584C30.292 14.4363 29.6534 17.6186 27.653 19.9987C28.5218 22.9531 27.7538 26.2483 25.6843 28.3177C23.6149 30.3871 20.3197 31.1552 17.3653 30.2864C14.4109 29.4175 11.4939 30.015 9.11379 28.0146C6.73371 26.0142 6.13619 23.0972 7.00504 20.1428C6.13619 17.1883 6.90423 13.8931 8.97368 11.8237C11.0431 9.75425 14.3383 8.98621 17.2928 9.85506C18.261 6.87458 20.6276 4.4085 22.9416 5.14355Z" fill="#3A4D8F"/>
-        {/* Pink Shape */}
         <path d="M28.4111 20.9167C29.8333 21.5057 30.9023 22.8278 31.3368 24.3822C31.758 25.8829 31.4283 27.5253 30.4504 28.7891C30.8394 30.2253 30.5097 31.7897 29.5418 32.9645C28.5739 34.1393 27.0195 34.6338 25.6833 34.1993C24.3472 33.7648 22.8129 34.0438 21.6381 33.1759C20.4633 32.308 20.1336 30.8718 20.4731 29.5357C20.1336 28.1995 20.4026 26.7433 21.2705 25.5685C22.1384 24.3937 23.4605 23.8592 24.8827 24.2837C25.4717 22.8615 26.8828 21.7925 28.4111 20.9167Z" fill="#EC4899"/>
     </svg>
 );
@@ -42,6 +43,9 @@ const App: React.FC = () => {
   const [selectedInstance, setSelectedInstance] = useState<AppInstance | null>(null);
   const [selectedException, setSelectedException] = useState<ExceptionInstance | null>(null);
   const [selectedTaskViewData, setSelectedTaskViewData] = useState<{ instance: AppInstance, exception: ExceptionInstance } | null>(null);
+
+  // Deep linking and context preservation state
+  const [selectedAppDetailName, setSelectedAppDetailName] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -76,32 +80,47 @@ const App: React.FC = () => {
       return;
     }
 
-    // Base filtering by zone first
     let tempInstances = instances.filter(inst => inst.zone === currentZone.id);
     let tempSchedules = scheduledJobs.filter(job => job.zone === currentZone.id);
 
-    // Conditionally filter by tenant if "All tenants" is not selected
     if (currentTenant.id !== 'all') {
       tempInstances = tempInstances.filter(inst => inst.tenantId === currentTenant.id);
       tempSchedules = tempSchedules.filter(job => job.tenantId === currentTenant.id);
     }
     
     if (currentUser.role === UserRole.SAAS_SRE) {
-      // SaaS SREs view is scoped to their assigned SaaS and business-related exceptions.
       tempInstances = tempInstances.filter(inst => 
         inst.saas === currentUser.saas && inst.exceptionType !== ExceptionType.SYSTEM
       );
       tempSchedules = tempSchedules.filter(job => job.saas === currentUser.saas);
-    } else if (currentUser.role === UserRole.PLATFORM_SRE) {
-      // Platform SREs have a global view of all instances within the selected context.
-      // No additional filtering is needed beyond the base filters.
-      // This explicit block clarifies the logic.
     }
 
     setFilteredInstances(tempInstances);
     setFilteredScheduledJobs(tempSchedules);
-
   }, [instances, scheduledJobs, currentZone, currentTenant, currentUser, activeWorkbench]);
+
+  // Derived data for the App Detail Side Sheet
+  const selectedAppGroup = useMemo((): AppGroup | null => {
+    if (!selectedAppDetailName) return null;
+    const appInstances = instances.filter(i => i.applicationName === selectedAppDetailName);
+    if (appInstances.length === 0) return null;
+
+    const stats = { total: 0, completed: 0, failed: 0, running: 0, cancelled: 0 };
+    appInstances.forEach(inst => {
+        stats.total++;
+        if (inst.status === InstanceStatus.SUCCESS) stats.completed++;
+        else if (inst.status === InstanceStatus.FAILED) stats.failed++;
+        else if (inst.status === InstanceStatus.IN_PROGRESS) stats.running++;
+        else if (inst.status === InstanceStatus.CANCELLED) stats.cancelled++;
+    });
+
+    return {
+        instances: appInstances,
+        owner: appInstances[0].saas,
+        description: `Operations context for ${selectedAppDetailName}`,
+        stats
+    };
+  }, [selectedAppDetailName, instances]);
 
   const handleSelectInstance = (instance: AppInstance | null | { id: string }) => {
     if (instance) {
@@ -124,19 +143,12 @@ const App: React.FC = () => {
   const handleShowTaskDetailView = async (exceptionId: string) => {
     const linkedInstance = instances.find(inst => inst.exceptionInstanceId === exceptionId);
     const exceptionDetails = await getExceptionInstance(exceptionId);
-
     if (linkedInstance && exceptionDetails) {
-      setSelectedException(null); // Close exception view
-      setSelectedTaskViewData({ instance: linkedInstance, exception: exceptionDetails }); // Open new task detail view
-    } else {
-      console.warn(`Could not find required data for Exception ID: ${exceptionId}`);
+      setSelectedException(null);
+      setSelectedTaskViewData({ instance: linkedInstance, exception: exceptionDetails });
     }
   };
 
-  const handleCloseTaskDetailView = () => {
-    setSelectedTaskViewData(null);
-  };
-  
   const handleUpdateInstance = (updatedInstance: AppInstance) => {
     setInstances(prev => prev.map(inst => inst.id === updatedInstance.id ? updatedInstance : inst));
     if (selectedInstance && selectedInstance.id === updatedInstance.id) {
@@ -172,6 +184,7 @@ const App: React.FC = () => {
     setSelectedException(null);
     setSelectedTaskViewData(null);
     setActiveConsole('File Processing');
+    setSelectedAppDetailName(null);
   };
 
   const renderDashboard = () => {
@@ -210,7 +223,7 @@ const App: React.FC = () => {
           />
         );
       case 'Schedule':
-        return <ScheduleConsole tenant={currentTenant} />;
+        return <ScheduleConsole tenant={currentTenant} onSelectApp={setSelectedAppDetailName} onSelectInstance={handleSelectInstance} />;
       default:
         return null;
     }
@@ -253,6 +266,31 @@ const App: React.FC = () => {
           {renderDashboard()}
         </main>
       </div>
+
+      {/* App Detail Side Sheet ( Drawer for context preservation ) */}
+      {selectedAppDetailName && selectedAppGroup && (
+        <>
+            <div className="fixed inset-0 bg-black/40 z-[44]" onClick={() => setSelectedAppDetailName(null)}></div>
+            <aside className="fixed top-0 right-0 h-full w-full max-w-7xl bg-slate-50 border-l border-slate-200 shadow-2xl z-[45] flex flex-col animate-slide-in-right">
+                <header className="p-4 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
+                    <h2 className="text-lg font-bold text-slate-800">Application Foresnics</h2>
+                    <button onClick={() => setSelectedAppDetailName(null)} className="p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors"><XIcon /></button>
+                </header>
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                    <L2AppDetailView 
+                        appName={selectedAppDetailName}
+                        data={selectedAppGroup}
+                        initialFilter={null}
+                        onBack={() => setSelectedAppDetailName(null)}
+                        onSelectInstance={handleSelectInstance}
+                        currentUser={currentUser}
+                        onUpdateInstance={handleUpdateInstance}
+                    />
+                </div>
+            </aside>
+        </>
+      )}
+
       {selectedInstance && (
         <InstanceDetailView 
           instance={selectedInstance} 
@@ -272,7 +310,7 @@ const App: React.FC = () => {
       {selectedTaskViewData && (
           <TaskDetailView 
             data={selectedTaskViewData}
-            onClose={handleCloseTaskDetailView}
+            onClose={() => setSelectedTaskViewData(null)}
             user={currentUser}
             onUpdateInstance={handleUpdateInstance}
           />
@@ -281,9 +319,8 @@ const App: React.FC = () => {
   );
 };
 
-
 // --- Inlined Workbench Components ---
-const BriefcaseIconWB = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
+const BriefcaseIconWB = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
 
 const WorkbenchCard: React.FC<{ title: string; description: string; id: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean;}> = ({ title, description, id, icon, onClick, disabled }) => {
   const cardClasses = `bg-white border border-slate-200 rounded-lg p-6 flex flex-col h-full shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-sky-500/50 transition-all duration-200 cursor-pointer'}`;

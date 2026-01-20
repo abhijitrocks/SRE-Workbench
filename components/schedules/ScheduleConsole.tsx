@@ -1,11 +1,15 @@
 
 import React, { useState } from 'react';
-import { Tenant, ScheduleDefinition, ScheduleExecution } from '../../types';
+import { Tenant, ScheduleDefinition, ScheduleExecution, AppInstance } from '../../types';
 import ScheduleL1View from './ScheduleL1View';
 import ScheduleL2View from './ScheduleL2View';
 import ScheduleL3View from './ScheduleL3View';
 
-const ScheduleConsole: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
+const ScheduleConsole: React.FC<{ 
+  tenant: Tenant;
+  onSelectApp: (appName: string) => void;
+  onSelectInstance: (instance: { id: string }) => void;
+}> = ({ tenant, onSelectApp, onSelectInstance }) => {
   const [viewState, setViewState] = useState<{
     level: 'L1' | 'L2' | 'L3';
     selectedScheduleId: string | null;
@@ -41,6 +45,8 @@ const ScheduleConsole: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
           scheduleId={viewState.selectedScheduleId} 
           onBack={backToL1} 
           onSelectExecution={navigateToL3}
+          onSelectApp={onSelectApp}
+          onSelectInstance={onSelectInstance}
         />
       )}
       {viewState.level === 'L3' && viewState.selectedExecutionId && viewState.selectedScheduleId && (

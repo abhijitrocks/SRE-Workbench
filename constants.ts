@@ -183,7 +183,7 @@ const generateMockInstances = (): AppInstance[] => {
       });
   }
 
-  // Add 5 Cancelled for sample
+  // 5 Cancelled
   for(let i=1; i<=5; i++) {
     instances.push({
         id: `sample-c-${i}`, fileName: `Cancelled_Batch_X${i}.csv`,
@@ -198,10 +198,8 @@ const generateMockInstances = (): AppInstance[] => {
     });
   }
 
-  // Add broad success data for other folders
   const otherApps = ['Humana_ClaimsProcessing', 'enrollment-eligibility'];
   otherApps.forEach(app => {
-      // 5 Failed for each
       for(let i=1; i<=5; i++) {
           const isClaims = app === 'Humana_ClaimsProcessing';
           instances.push({
@@ -221,7 +219,6 @@ const generateMockInstances = (): AppInstance[] => {
             ]
           });
       }
-      // 15-20 Completed for each
       const count = 15 + Math.floor(Math.random() * 10);
       for(let i=1; i<=count; i++) {
           instances.push({
@@ -231,7 +228,6 @@ const generateMockInstances = (): AppInstance[] => {
             retryCount: 0, businessImpact: BusinessImpact.LOW, tasks: [], ...createSuccessData(`${app}-s-${i}`)
           });
       }
-      // Add 2 Cancelled for each
       for(let i=1; i<=2; i++) {
         instances.push({
             id: `${app}-c-${i}`, fileName: `${app}_Cancelled_${i}.json`,
@@ -255,17 +251,12 @@ export const mockAppInstances: AppInstance[] = generateMockInstances().map(inst 
     customerWorkbench: getWorkbenchName(inst.saas),
 }));
 
-// Mock File Application Specifications - FULL SPECIFICATIONS
 export const mockFileAppSpecs: Record<string, FileAppSpec | any> = {
   'sample-file-application': {
     name: 'sample-file-application',
     fileType: 'CSV',
     delimeter: '|',
-    trigger: {
-      triggerType: 'SCHEDULED',
-      scheduleCron: '0 0 * * *',
-      timezone: 'UTC'
-    },
+    trigger: { triggerType: 'SCHEDULED', scheduleCron: '0 0 * * *', timezone: 'UTC' },
     source: {
       type: 'DB',
       outputFileName: 'input_source.json',
@@ -282,7 +273,7 @@ export const mockFileAppSpecs: Record<string, FileAppSpec | any> = {
       { id: 't1', protocol: 'dia', command: 'create-folder', parameters: { name: '${JOB_ID}', path: '/apps/sample/processing' } },
       { id: 't2', protocol: 'dia', command: 'move-file', parameters: { source: '/tmp/input_source.json', destination: '/apps/sample/processing/${JOB_ID}/input.json' } },
       { id: 't3', protocol: 'security', command: 'decrypt', parameters: { keyId: 'KMS_SECRET_01', input: 'input.json', output: 'decrypted.json' } },
-      { id: 't4', protocol: 'compute', command: 'validate-schema', parameters: { schemaId: 'SCH_V1', input: 'decrypted.json' } },
+      { id: 't4', protocol: 'compute', command: 'validate-schema', parameters: { schemaId: 'SCH_V1', input: 'decrypted.json', output: 'final.csv' } },
       { id: 't5', protocol: 'compute', command: 'transform-records', parameters: { mapper: 'MAP_SAMPLE_V2', input: 'decrypted.json', output: 'final.csv' } }
     ],
     viewConfig: {
@@ -296,11 +287,7 @@ export const mockFileAppSpecs: Record<string, FileAppSpec | any> = {
   'Humana_ClaimsProcessing': {
     name: 'Humana_ClaimsProcessing',
     fileType: 'JSON',
-    trigger: { 
-      triggerType: 'SCHEDULED', 
-      scheduleCron: '0 */5 * * * *', 
-      timezone: 'UTC' 
-    },
+    trigger: { triggerType: 'SCHEDULED', scheduleCron: '0 */5 * * * *', timezone: 'UTC' },
     source: {
       type: 'EXTERNAL_FOLDER',
       externalConfig: {
@@ -318,10 +305,7 @@ export const mockFileAppSpecs: Record<string, FileAppSpec | any> = {
   'enrollment-eligibility': {
     name: 'enrollment-eligibility',
     fileType: 'CSV',
-    trigger: { 
-      triggerType: 'EVENT', 
-      timezone: 'ASIA/KOLKATA' 
-    },
+    trigger: { triggerType: 'EVENT', timezone: 'ASIA/KOLKATA' },
     source: {
       type: 'DB',
       dbConfig: {
@@ -337,11 +321,7 @@ export const mockFileAppSpecs: Record<string, FileAppSpec | any> = {
       { id: 't3', protocol: 'compute', command: 'transform-to-canonical', parameters: { version: '1.4' } },
       { id: 't4', protocol: 'dia', command: 'push-to-webhook', parameters: { url: 'https://webhook.mondo.com/enroll' } }
     ],
-    eventContext: {
-        publisher: 'Zeta-Enrollment-Service',
-        topic: 'enrollment.created.v1',
-        schema: 'avro'
-    }
+    eventContext: { publisher: 'Zeta-Enrollment-Service', topic: 'enrollment.created.v1', schema: 'avro' }
   }
 };
 
@@ -529,10 +509,7 @@ export const mockDiaFolders: DiaFolder[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-01T00:00:00Z',
     updatedTs: '2024-03-20T10:00:00Z',
-    fileApplication: {
-      name: 'Humana_ClaimsProcessing',
-      inputArguments: []
-    }
+    fileApplication: { name: 'Humana_ClaimsProcessing', inputArguments: [] }
   },
   {
     resourceName: 'FOLD-004',
@@ -545,10 +522,7 @@ export const mockDiaFolders: DiaFolder[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-05T00:00:00Z',
     updatedTs: '2024-03-20T10:00:00Z',
-    fileApplication: {
-      name: 'Humana_ClaimsProcessing',
-      inputArguments: []
-    }
+    fileApplication: { name: 'Humana_ClaimsProcessing', inputArguments: [] }
   },
   {
     resourceName: 'FOLD-005',
@@ -561,10 +535,7 @@ export const mockDiaFolders: DiaFolder[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-10T00:00:00Z',
     updatedTs: '2024-03-20T10:00:00Z',
-    fileApplication: {
-      name: 'sample-file-application',
-      inputArguments: []
-    }
+    fileApplication: { name: 'sample-file-application', inputArguments: [] }
   },
   {
     resourceName: 'FOLD-002',
@@ -577,14 +548,8 @@ export const mockDiaFolders: DiaFolder[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-02-20T11:00:00Z',
     updatedTs: '2024-03-15T13:45:00Z',
-    smartFolderDefinition: {
-        criteria: 'TAG',
-        tags: [{ key: 'env', value: 'stress' }]
-    },
-    fileApplication: {
-      name: 'enrollment-eligibility',
-      inputArguments: []
-    }
+    smartFolderDefinition: { criteria: 'TAG', tags: [{ key: 'env', value: 'stress' }] },
+    fileApplication: { name: 'enrollment-eligibility', inputArguments: [] }
   },
   {
     resourceName: 'FOLD-003',
@@ -597,10 +562,7 @@ export const mockDiaFolders: DiaFolder[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-20T08:30:00Z',
     updatedTs: '2024-03-19T10:20:00Z',
-    fileApplication: {
-      name: 'Humana_ClaimsProcessing',
-      inputArguments: []
-    }
+    fileApplication: { name: 'Humana_ClaimsProcessing', inputArguments: [] }
   }
 ];
 
@@ -616,6 +578,7 @@ export const mockScheduleDefinitions: ScheduleDefinition[] = [
     owner: 'mondo_app_user',
     timezone: 'UTC',
     appId: 'Humana_ClaimsProcessing',
+    status: ScheduleStatus.ON_SCHEDULE,
     stats: { completed: 28, missed: 2, failed: 1 }
   },
   {
@@ -627,6 +590,7 @@ export const mockScheduleDefinitions: ScheduleDefinition[] = [
     owner: 'perf_tester_svc',
     timezone: 'EST',
     appId: 'enrollment-eligibility',
+    status: ScheduleStatus.ON_SCHEDULE,
     stats: { completed: 142, missed: 0, failed: 4 }
   },
   {
@@ -638,18 +602,73 @@ export const mockScheduleDefinitions: ScheduleDefinition[] = [
     owner: 'lsg_external_client',
     timezone: 'GMT',
     appId: 'Humana_ClaimsProcessing',
+    status: ScheduleStatus.ON_SCHEDULE,
     stats: { completed: 520, missed: 12, failed: 0 }
+  },
+  {
+    id: 'SCH-004',
+    name: 'EOD_GCP_Audit',
+    tenantId: 'mondo',
+    description: 'Mandatory end-of-day compliance audit for GCP infrastructure logs.',
+    cronFrequency: '0 23 * * *',
+    owner: 'system_operator',
+    timezone: 'UTC',
+    appId: 'sample-file-application',
+    status: ScheduleStatus.OVERDUE,
+    stats: { completed: 45, missed: 3, failed: 1 }
   }
 ];
 
+// Helper to generate a massive history for testing L2 scrolling/slice
+const generateExecutionHistory = (scheduleId: string, baseDate: Date, count: number): ScheduleExecution[] => {
+    const history: ScheduleExecution[] = [];
+    const statuses = [ScheduleRunStatus.SUCCESS, ScheduleRunStatus.SUCCESS, ScheduleRunStatus.SUCCESS, ScheduleRunStatus.MISSED, ScheduleRunStatus.FAILED];
+    
+    for (let i = 0; i < count; i++) {
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() - i);
+        date.setHours(23, 0, 0, 0);
+
+        const status = statuses[i % statuses.length];
+        const actualTime = status === ScheduleRunStatus.MISSED ? null : new Date(date.getTime() + (Math.random() * 600000)).toISOString();
+
+        history.push({
+            id: `EXE-${scheduleId.slice(-3)}-${1000 + i}`,
+            scheduleId,
+            expectedTime: date.toISOString(),
+            actualTime,
+            status,
+            instanceId: status === ScheduleRunStatus.SUCCESS ? `sample-s-${(i % 10) + 1}` : undefined
+        });
+    }
+    return history;
+};
+
 export const mockScheduleExecutions: ScheduleExecution[] = [
-  { id: 'EXE-1001', scheduleId: 'SCH-001', expectedTime: '2024-03-21T01:00:00Z', actualTime: '2024-03-21T01:00:05Z', status: ScheduleRunStatus.SUCCESS },
+  // SCH-001 (Nightly_Mondo_Recon)
+  { id: 'EXE-1001', scheduleId: 'SCH-001', expectedTime: '2024-03-21T01:00:00Z', actualTime: '2024-03-21T01:00:05Z', status: ScheduleRunStatus.SUCCESS, instanceId: 'Humana_ClaimsProcessing-s-1' },
   { id: 'EXE-1002', scheduleId: 'SCH-001', expectedTime: '2024-03-20T01:00:00Z', actualTime: null, status: ScheduleRunStatus.MISSED },
   { id: 'EXE-1003', scheduleId: 'SCH-001', expectedTime: '2024-03-19T01:00:00Z', actualTime: '2024-03-19T01:02:14Z', status: ScheduleRunStatus.FAILED },
-  { id: 'EXE-1004', scheduleId: 'SCH-001', expectedTime: '2024-03-18T01:00:00Z', actualTime: '2024-03-18T01:00:02Z', status: ScheduleRunStatus.SUCCESS },
-  
-  { id: 'EXE-2001', scheduleId: 'SCH-002', expectedTime: '2024-03-21T14:15:00Z', actualTime: '2024-03-21T14:15:10Z', status: ScheduleRunStatus.SUCCESS },
-  { id: 'EXE-2002', scheduleId: 'SCH-002', expectedTime: '2024-03-21T14:00:00Z', actualTime: '2024-03-21T14:00:05Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-1004', scheduleId: 'SCH-001', expectedTime: '2024-03-18T01:00:00Z', actualTime: '2024-03-18T01:00:02Z', status: ScheduleRunStatus.SUCCESS, instanceId: 'Humana_ClaimsProcessing-s-2' },
+  { id: 'EXE-1005', scheduleId: 'SCH-001', expectedTime: '2024-03-22T01:00:00Z', actualTime: '2024-03-22T01:00:01Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-1006', scheduleId: 'SCH-001', expectedTime: '2024-03-23T01:00:00Z', actualTime: '2024-03-23T01:00:05Z', status: ScheduleRunStatus.SUCCESS },
+
+  // SCH-002 (Perf_Stress_Monitor)
+  { id: 'EXE-2001', scheduleId: 'SCH-002', expectedTime: '2024-03-21T14:15:00Z', actualTime: '2024-03-21T14:15:10Z', status: ScheduleRunStatus.SUCCESS, instanceId: 'enrollment-eligibility-s-1' },
+  { id: 'EXE-2002', scheduleId: 'SCH-002', expectedTime: '2024-03-21T14:00:00Z', actualTime: '2024-03-21T14:00:05Z', status: ScheduleRunStatus.SUCCESS, instanceId: 'enrollment-eligibility-s-2' },
   { id: 'EXE-2003', scheduleId: 'SCH-002', expectedTime: '2024-03-21T13:45:00Z', actualTime: '2024-03-21T13:46:20Z', status: ScheduleRunStatus.FAILED },
   { id: 'EXE-2004', scheduleId: 'SCH-002', expectedTime: '2024-03-21T13:30:00Z', actualTime: '2024-03-21T13:30:00Z', status: ScheduleRunStatus.SKIPPED },
+  { id: 'EXE-2005', scheduleId: 'SCH-002', expectedTime: '2024-03-22T09:00:00Z', actualTime: '2024-03-22T09:00:00Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-2006', scheduleId: 'SCH-002', expectedTime: '2024-03-22T09:15:00Z', actualTime: '2024-03-22T09:15:01Z', status: ScheduleRunStatus.SUCCESS },
+
+  // SCH-003 (LSG_Inbound_Scan)
+  { id: 'EXE-3001', scheduleId: 'SCH-003', expectedTime: '2024-03-21T10:00:00Z', actualTime: '2024-03-21T10:00:05Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-3002', scheduleId: 'SCH-003', expectedTime: '2024-03-21T09:00:00Z', actualTime: '2024-03-21T09:00:02Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-3003', scheduleId: 'SCH-003', expectedTime: '2024-03-21T08:00:00Z', actualTime: null, status: ScheduleRunStatus.MISSED },
+  { id: 'EXE-3004', scheduleId: 'SCH-003', expectedTime: '2024-03-21T07:00:00Z', actualTime: '2024-03-21T07:00:01Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-3005', scheduleId: 'SCH-003', expectedTime: '2024-03-22T10:00:00Z', actualTime: '2024-03-22T10:00:02Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-3006', scheduleId: 'SCH-003', expectedTime: '2024-03-23T08:00:00Z', actualTime: '2024-03-23T08:00:00Z', status: ScheduleRunStatus.SUCCESS },
+
+  // SCH-004 (EOD_GCP_Audit) - EXPANDED TO 35 RECORDS
+  ...generateExecutionHistory('SCH-004', new Date('2024-03-24'), 35)
 ];

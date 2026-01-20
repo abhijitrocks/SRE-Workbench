@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { ScheduledJob, ScheduleStatus, InstanceStatus, AppInstance } from '../../types';
 import ScheduleActionModals from './ScheduleActionModals';
+import { getHumanReadableCron } from '../../utils/cronUtils';
 
 // --- ICONS ---
-const ClockIcon = () => <svg xmlns="http://www.w.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clipRule="evenodd" /></svg>;
+const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clipRule="evenodd" /></svg>;
 
 const formatDate = (dateString: string) => {
     if (!dateString) return '-';
@@ -76,7 +78,7 @@ const SchedulesView: React.FC<SchedulesViewProps> = ({ scheduledJobs, onSelectIn
                         <tr>
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Schedule Name</th>
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">SaaS</th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Schedule Cadence</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cadence</th>
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Last Run</th>
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Next Expected Run</th>
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
@@ -91,7 +93,10 @@ const SchedulesView: React.FC<SchedulesViewProps> = ({ scheduledJobs, onSelectIn
                                     <p className="text-xs text-slate-500">{job.applicationName}</p>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-slate-700">{job.saas}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono text-xs flex items-center"><ClockIcon />{job.cronExpression}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-medium text-xs flex items-center">
+                                    <ClockIcon />
+                                    <span title={job.cronExpression}>{getHumanReadableCron(job.cronExpression)}</span>
+                                </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
                                     {job.lastRun ? (
                                         <div>

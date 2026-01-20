@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AppInstance, InstanceStatus, User, UserRole, ExceptionType, ScheduledJob, ScheduleStatus } from '../../types';
 import { mockAppInstances } from '../../constants';
 import { notifySre } from '../../services/apiService';
@@ -153,7 +153,9 @@ const FileProcessingDashboard: React.FC<{
   onUpdateInstance: (instance: AppInstance) => void;
   onUpdateSchedule: (schedule: ScheduledJob) => void;
   onAddInstance: (instance: AppInstance) => void;
-}> = ({ instances, scheduledJobs, onSelectInstance, loading, error, currentUser, onUpdateInstance, onUpdateSchedule, onAddInstance }) => {
+  initialAppName?: string | null;
+  onClearInitialApp?: () => void;
+}> = ({ instances, scheduledJobs, onSelectInstance, loading, error, currentUser, onUpdateInstance, onUpdateSchedule, onAddInstance, initialAppName, onClearInitialApp }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InstanceStatus | 'All'>(InstanceStatus.FAILED);
   const [saasFilter, setSaasFilter] = useState<string>('All');
@@ -168,7 +170,15 @@ const FileProcessingDashboard: React.FC<{
   const [sortColumn, setSortColumn] = useState<string>('startedAt');
   const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('desc');
 
-  const statusOptions = Object.values(InstanceStatus); // Now includes Success for navigation
+  const statusOptions = Object.values(InstanceStatus);
+
+  // Effect to handle navigation from other consoles (e.g. Schedule -> App Detail)
+  useEffect(() => {
+    if (initialAppName) {
+      setActiveView('folders');
+      // The child FoldersView component will handle drilling down into the specific app
+    }
+  }, [initialAppName]);
 
   const { availableSaas, availableFolders } = useMemo(() => {
     const saasSet = new Set<string>();
@@ -292,6 +302,8 @@ const FileProcessingDashboard: React.FC<{
                 onJumpToInstances={handleJumpToInstances}
                 currentUser={currentUser}
                 onUpdateInstance={onUpdateInstance}
+                initialAppName={initialAppName}
+                onClearInitialApp={onClearInitialApp}
             />
         );
       case 'schedules':

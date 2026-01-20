@@ -374,6 +374,8 @@ export interface ScheduleDefinition {
   owner: string;
   timezone: string;
   appId: string;
+  // Fix: Added status property to match usage in ScheduleL2View
+  status: ScheduleStatus;
   stats: {
     completed: number;
     missed: number;
@@ -394,4 +396,5 @@ export interface ScheduleExecution {
   expectedTime: string;
   actualTime: string | null;
   status: ScheduleRunStatus;
+  instanceId?: string;
 }
