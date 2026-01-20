@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppInstance, Task, LogEntry, InstanceStatus, ExceptionType } from '../../types';
 import LogViewer from '../dashboard/LogViewer';
@@ -7,6 +6,7 @@ import LiveLogsModal from '../dashboard/LiveLogsModal';
 import { getLogsForTask } from '../../services/apiService';
 import { allExceptionDefs } from '../../constants/exceptions';
 import AuditTrailViewer from './AuditTrailViewer';
+import { mockTenants } from '../../constants';
 
 // --- ICONS ---
 const CheckCircleIcon = () => <svg className="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
@@ -116,19 +116,23 @@ const InstanceFailureContent: React.FC<{
 
 // --- SUB-COMPONENTS ---
 
-const InstanceMeta: React.FC<{instance: AppInstance}> = ({instance}) => (
-    <div className="bg-white p-4 rounded-lg border border-slate-200">
-        <h3 className="font-semibold text-slate-800 mb-4">{instance.applicationName}</h3>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <MetaItem label="Status"><StatusChip status={instance.status}/></MetaItem>
-            <MetaItem label="SaaS">{instance.saas}</MetaItem>
-            <MetaItem label="Zone">{instance.zone}</MetaItem>
-            <MetaItem label="Customer Workbench">{instance.customerWorkbench || '-'}</MetaItem>
-            <MetaItem label="Started At">{new Date(instance.startedAt).toLocaleString()}</MetaItem>
-            <MetaItem label="Last Updated">{new Date(instance.lastUpdatedAt).toLocaleString()}</MetaItem>
-        </dl>
-    </div>
-);
+const InstanceMeta: React.FC<{instance: AppInstance}> = ({instance}) => {
+    const tenantName = mockTenants.find(t => t.id === instance.tenantId)?.name || instance.tenantId;
+    return (
+        <div className="bg-white p-4 rounded-lg border border-slate-200">
+            <h3 className="font-semibold text-slate-800 mb-4">{instance.applicationName}</h3>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <MetaItem label="Status"><StatusChip status={instance.status}/></MetaItem>
+                <MetaItem label="SaaS">{instance.saas}</MetaItem>
+                <MetaItem label="Tenant">{tenantName}</MetaItem>
+                <MetaItem label="Zone">{instance.zone}</MetaItem>
+                <MetaItem label="Customer Workbench">{instance.customerWorkbench || '-'}</MetaItem>
+                <MetaItem label="Started At">{new Date(instance.startedAt).toLocaleString()}</MetaItem>
+                <MetaItem label="Last Updated">{new Date(instance.lastUpdatedAt).toLocaleString()}</MetaItem>
+            </dl>
+        </div>
+    );
+};
 
 const ExceptionDetails: React.FC<{instance: AppInstance, onSelectException?: (id: string) => void}> = ({instance, onSelectException}) => {
     if (!instance.detailedErrorMessage) {

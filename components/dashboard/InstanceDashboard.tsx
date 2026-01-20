@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useMemo } from 'react';
 import { AppInstance, InstanceStatus, User, UserRole, ExceptionType, ScheduledJob, ScheduleStatus } from '../../types';
 import { mockAppInstances } from '../../constants';
@@ -22,6 +18,7 @@ const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16
 const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
 const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
 const SpinnerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 animate-spin"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
 
 
 // --- HELPER FUNCTIONS ---
@@ -32,7 +29,8 @@ const formatDate = (dateString: string) => {
 };
 
 const calculateDuration = (start: string, end: string, status: InstanceStatus): string => {
-    if (status !== InstanceStatus.SUCCESS && status !== InstanceStatus.FAILED) return '-';
+    const isTerminal = status === InstanceStatus.SUCCESS || status === InstanceStatus.FAILED || status === InstanceStatus.CANCELLED;
+    if (!isTerminal || !end) return '-';
     const startDate = new Date(start);
     const endDate = new Date(end);
     let diff = Math.abs(endDate.getTime() - startDate.getTime()) / 1000;
@@ -58,7 +56,7 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ title, value, color = 'text-slate-900', highlight = false, onClick }) => (
   <div 
     onClick={onClick}
-    className={`bg-white rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${highlight ? 'border-2 border-sky-500 shadow-md' : 'border border-slate-200'}`}
+    className={`bg-white rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${highlight ? 'ring-2 ring-sky-500 shadow-md border-sky-500' : 'border border-slate-200'}`}
   >
     <h3 className="text-sm font-medium text-slate-500">{title}</h3>
     <p className={`text-3xl font-bold ${color}`}>{value}</p>
@@ -71,7 +69,6 @@ const StatusIndicator: React.FC<{ status: InstanceStatus }> = ({ status }) => {
         [InstanceStatus.IN_PROGRESS]: { dot: 'bg-blue-500', text: 'text-slate-700' },
         [InstanceStatus.FAILED]: { dot: 'bg-red-500', text: 'text-slate-700' },
         [InstanceStatus.PENDING]: { dot: 'bg-amber-500', text: 'text-slate-700' },
-        // Fix: Add CANCELLED status to support all instance states and resolve type error.
         [InstanceStatus.CANCELLED]: { dot: 'bg-slate-500', text: 'text-slate-700' },
     };
     const style = styles[status];
@@ -100,38 +97,34 @@ const TaskProgress: React.FC<{ completed: number; total: number }> = ({ complete
 
 const ExceptionDefinitions: React.FC<{ isOpen: boolean; onToggle: () => void; userRole: UserRole }> = ({ isOpen, onToggle, userRole }) => {
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
+    <div className="bg-sky-50 border border-sky-100 rounded-lg shadow-sm">
       <button 
         onClick={onToggle}
-        className="w-full flex justify-between items-center p-4 text-left"
-        aria-expanded={isOpen}
+        className="w-full flex justify-between items-center p-3 text-left"
       >
-        <div>
-          <h2 className="text-md font-semibold text-slate-800">Understanding Exception Types</h2>
-          <p className="text-sm text-slate-500">Learn the difference between Business and System exceptions.</p>
+        <div className="flex items-center space-x-2 text-sky-800">
+          <InfoIcon />
+          <h2 className="text-sm font-semibold">Reference: Exception Classification</h2>
         </div>
-        <ChevronDownIcon className={`transform transition-transform duration-200 text-slate-500 ${isOpen ? 'rotate-180' : ''}`} />
+        <div className="flex items-center text-xs text-sky-600 font-medium">
+            {isOpen ? 'Hide' : 'Show Details'}
+            <ChevronDownIcon className={`ml-1 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
       </button>
       <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[500px]' : 'max-h-0'}`}>
-        <div className={`p-4 border-t border-slate-200 grid grid-cols-1 ${userRole === UserRole.PLATFORM_SRE ? 'md:grid-cols-2' : ''} gap-x-6 gap-y-4`}>
+        <div className={`p-4 border-t border-sky-100 grid grid-cols-1 ${userRole === UserRole.PLATFORM_SRE ? 'md:grid-cols-2' : ''} gap-x-6 gap-y-4`}>
             <div>
-                <h4 className="font-semibold mb-2 text-sm text-orange-600">Business Exception</h4>
-                <p className="text-sm text-slate-600">
-                    Problems caused by input data, schema, or domain validation (affects correctness, must be handled by business logic or publisher).
+                <h4 className="font-bold mb-1 text-xs text-orange-700 uppercase tracking-tight">Business Exceptions</h4>
+                <p className="text-xs text-sky-900/80 leading-relaxed">
+                    Problems caused by input data, schema, or domain validation. Requires handle from business logic or publisher.
                 </p>
-                <em className="text-slate-500 block mt-2 text-xs">
-                    <strong>Example:</strong> missing beneficiaryId, invalid plan code, duplicate beneficiary within group.
-                </em>
             </div>
             {userRole === UserRole.PLATFORM_SRE && (
                 <div>
-                    <h4 className="font-semibold mb-2 text-sm text-purple-600">System Exception</h4>
-                    <p className="text-sm text-slate-600">
-                        Infra/platform/runtime failures outside business logic (affect availability/reliability).
+                    <h4 className="font-bold mb-1 text-xs text-purple-700 uppercase tracking-tight">System Exceptions</h4>
+                    <p className="text-xs text-sky-900/80 leading-relaxed">
+                        Infra/platform/runtime failures outside business logic. Requires Platform SRE intervention.
                     </p>
-                    <em className="text-slate-500 block mt-2 text-xs">
-                        <strong>Example:</strong> network timeouts to Gluon, disk full, permission denied, job JVM crash.
-                    </em>
                 </div>
             )}
         </div>
@@ -175,6 +168,8 @@ const FileProcessingDashboard: React.FC<{
   const [sortColumn, setSortColumn] = useState<string>('startedAt');
   const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('desc');
 
+  const statusOptions = Object.values(InstanceStatus); // Now includes Success for navigation
+
   const { availableSaas, availableFolders } = useMemo(() => {
     const saasSet = new Set<string>();
     const folderSet = new Set<string>();
@@ -190,8 +185,15 @@ const FileProcessingDashboard: React.FC<{
 
   const handleStatusFilterClick = (status: InstanceStatus | 'All') => {
     setStatusFilter(status);
-    setActiveView('instances'); // Switch to instances view when a status is clicked
-    setCurrentPage(1); // Reset pagination to first page on filter change
+    setActiveView('instances');
+    setCurrentPage(1);
+  };
+
+  const handleJumpToInstances = (folder: string, status: InstanceStatus | 'All') => {
+      setFolderFilter(folder);
+      setStatusFilter(status);
+      setActiveView('instances');
+      setCurrentPage(1);
   };
 
   const resetFilters = () => {
@@ -211,36 +213,25 @@ const FileProcessingDashboard: React.FC<{
       .filter(inst => exceptionFilter === 'All' || inst.exceptionType === exceptionFilter)
       .filter(inst => currentUser.role === UserRole.PLATFORM_SRE ? (saasFilter === 'All' || inst.saas === saasFilter) : true)
       .sort((a, b) => {
-          // For Platform SRE, sort by exception type first (System > Business)
           if (currentUser.role === UserRole.PLATFORM_SRE) {
-              if (a.exceptionType === ExceptionType.SYSTEM && b.exceptionType !== ExceptionType.SYSTEM) {
-                  return -1;
-              }
-              if (a.exceptionType !== ExceptionType.SYSTEM && b.exceptionType === ExceptionType.SYSTEM) {
-                  return 1;
-              }
+              if (a.exceptionType === ExceptionType.SYSTEM && b.exceptionType !== ExceptionType.SYSTEM) return -1;
+              if (a.exceptionType !== ExceptionType.SYSTEM && b.exceptionType === ExceptionType.SYSTEM) return 1;
           }
-
-          // Fallback to user-selected sort column
           const aVal = a[sortColumn as keyof AppInstance];
           const bVal = b[sortColumn as keyof AppInstance];
-          
           if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
           if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-          
           return 0;
       });
   }, [instances, searchTerm, statusFilter, folderFilter, exceptionFilter, saasFilter, currentUser.role, sortColumn, sortDirection]);
 
   const summary = useMemo(() => ({
       total: instances.length,
-      success: instances.filter(i => i.status === InstanceStatus.SUCCESS).length,
       failed: instances.filter(i => i.status === InstanceStatus.FAILED).length,
       inProgress: instances.filter(i => i.status === InstanceStatus.IN_PROGRESS).length,
       missedTriggers: scheduledJobs.filter(j => j.status === ScheduleStatus.OVERDUE).length,
   }), [instances, scheduledJobs]);
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -261,21 +252,18 @@ const FileProcessingDashboard: React.FC<{
             <div className="p-4 border-b border-slate-200 flex flex-wrap items-center gap-4">
               <div className="relative flex-grow max-w-xs">
                 <SearchIcon />
-                <input type="text" placeholder="Search by File or App Instance ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white border border-slate-300 rounded-md pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+                <input type="text" placeholder="Search by File or ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white border border-slate-300 rounded-md pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none" />
               </div>
-              <FilterDropdown value={statusFilter} onChange={(val) => { setStatusFilter(val as any); setCurrentPage(1); }} options={Object.values(InstanceStatus)} label="Status" />
+              <FilterDropdown value={statusFilter} onChange={(val) => { setStatusFilter(val as any); setCurrentPage(1); }} options={statusOptions} label="Status" />
               <FilterDropdown value={folderFilter} onChange={(val) => { setFolderFilter(val); setCurrentPage(1); }} options={availableFolders} label="Folder" />
               {currentUser.role === UserRole.PLATFORM_SRE && (
                 <FilterDropdown value={saasFilter} onChange={(val) => { setSaasFilter(val); setCurrentPage(1); }} options={availableSaas} label="SaaS" />
               )}
-              {currentUser.role === UserRole.PLATFORM_SRE && (
-                <Chip active={exceptionFilter === ExceptionType.SYSTEM} onClick={() => { setExceptionFilter(e => e === ExceptionType.SYSTEM ? 'All' : ExceptionType.SYSTEM); setCurrentPage(1); }}>System Exceptions</Chip>
-              )}
-              <button onClick={resetFilters} className="text-sm text-sky-600 hover:underline ml-auto">Reset</button>
+              <button onClick={resetFilters} className="text-sm text-sky-600 font-medium hover:underline ml-auto">Reset Filters</button>
             </div>
             <div className="overflow-x-auto">
-              {loading ? <div className="text-center p-8">Loading...</div> :
-                error ? <div className="text-center p-8 text-red-500">{error}</div> :
+              {loading ? <div className="text-center p-12 text-slate-400">Loading instances...</div> :
+                error ? <div className="text-center p-12 text-red-500 font-medium">{error}</div> :
                   <FileTable
                     instances={paginatedData}
                     onSelectInstance={onSelectInstance}
@@ -297,7 +285,15 @@ const FileProcessingDashboard: React.FC<{
           </div>
         );
       case 'folders':
-        return <FoldersView instances={instances} onSelectInstance={onSelectInstance} />;
+        return (
+            <FoldersView 
+                instances={instances} 
+                onSelectInstance={onSelectInstance} 
+                onJumpToInstances={handleJumpToInstances}
+                currentUser={currentUser}
+                onUpdateInstance={onUpdateInstance}
+            />
+        );
       case 'schedules':
         return <SchedulesView scheduledJobs={scheduledJobs} onSelectInstance={onSelectInstance} onUpdateSchedule={onUpdateSchedule} onAddInstance={onAddInstance} />;
       default:
@@ -309,14 +305,20 @@ const FileProcessingDashboard: React.FC<{
   return (
     <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-slate-800">File Processing</h1>
+        <div className="flex justify-between items-end">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-800">File Processing</h1>
+                <div className="flex items-center mt-1 space-x-4">
+                     <p className="text-sm text-slate-500">Managing health across zones and tenants</p>
+                     <span className="text-slate-300">|</span>
+                     <div className="flex items-center text-xs text-slate-400 font-mono">
+                        <RefreshIcon />
+                        <span className="ml-1">Last sync: 2m ago</span>
+                     </div>
+                </div>
+            </div>
             <div className="flex items-center space-x-2">
-                <button className="flex items-center bg-white border border-slate-300 rounded-md px-3 py-1.5 text-sm hover:bg-slate-50">
-                    <RefreshIcon />
-                    <span>2m</span>
-                </button>
-                <select className="bg-white border border-slate-300 rounded-md pl-3 pr-8 py-1.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <select className="bg-white border border-slate-300 rounded-md pl-3 pr-8 py-1.5 text-sm font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none">
                     <option>Last 7 days</option>
                     <option>Last 30 days</option>
                     <option>Last 90 days</option>
@@ -324,56 +326,55 @@ const FileProcessingDashboard: React.FC<{
             </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-slate-200">
-            <nav className="-mb-px flex space-x-6">
+        {/* Stats Grid - High situational awareness. HIDDEN ON FOLDER TAB */}
+        {activeView !== 'folders' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard 
+                title="All Instances" 
+                value={summary.total} 
+                highlight={statusFilter === 'All' && activeView === 'instances'}
+                onClick={() => handleStatusFilterClick('All')} 
+              />
+              <StatCard 
+                title="In Progress" 
+                value={summary.inProgress} 
+                color="text-blue-600" 
+                highlight={statusFilter === InstanceStatus.IN_PROGRESS}
+                onClick={() => handleStatusFilterClick(InstanceStatus.IN_PROGRESS)} 
+              />
+              <StatCard 
+                title="Failed" 
+                value={summary.failed} 
+                color="text-red-600" 
+                highlight={statusFilter === InstanceStatus.FAILED}
+                onClick={() => handleStatusFilterClick(InstanceStatus.FAILED)} 
+              />
+              <StatCard
+                title="Missed Triggers"
+                value={summary.missedTriggers}
+                color="text-amber-600"
+                highlight={activeView === 'schedules' && summary.missedTriggers > 0}
+                onClick={() => setActiveView('schedules')}
+              />
+          </div>
+        )}
+
+        {/* Navigation Tabs */}
+        <div className="border-b border-slate-200 flex justify-between items-end">
+            <nav className="-mb-px flex space-x-8">
                 <TabButton name="Instances" active={activeView === 'instances'} onClick={() => setActiveView('instances')} />
                 <TabButton name="Folders" active={activeView === 'folders'} onClick={() => setActiveView('folders')} />
                 <TabButton name="Schedules" active={activeView === 'schedules'} onClick={() => setActiveView('schedules')} notificationCount={summary.missedTriggers} />
             </nav>
+            {/* Documentation helper. HIDDEN ON FOLDER TAB */}
+            {activeView !== 'folders' && (
+              <div className="pb-2">
+                <ExceptionDefinitions isOpen={showDefinitions} onToggle={() => setShowDefinitions(!showDefinitions)} userRole={currentUser.role} />
+              </div>
+            )}
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatCard 
-              title="All Instances" 
-              value={summary.total} 
-              highlight={statusFilter === 'All' && activeView === 'instances'}
-              onClick={() => handleStatusFilterClick('All')} 
-            />
-            <StatCard 
-              title="In Progress" 
-              value={summary.inProgress} 
-              color="text-blue-600" 
-              highlight={statusFilter === InstanceStatus.IN_PROGRESS}
-              onClick={() => handleStatusFilterClick(InstanceStatus.IN_PROGRESS)} 
-            />
-            <StatCard 
-              title="Success" 
-              value={summary.success} 
-              color="text-green-600" 
-              highlight={statusFilter === InstanceStatus.SUCCESS}
-              onClick={() => handleStatusFilterClick(InstanceStatus.SUCCESS)} 
-            />
-            <StatCard 
-              title="Failed" 
-              value={summary.failed} 
-              color="text-red-600" 
-              highlight={statusFilter === InstanceStatus.FAILED}
-              onClick={() => handleStatusFilterClick(InstanceStatus.FAILED)} 
-            />
-            <StatCard
-              title="Missed Triggers"
-              value={summary.missedTriggers}
-              color="text-amber-600"
-              highlight={activeView === 'schedules' && summary.missedTriggers > 0}
-              onClick={() => setActiveView('schedules')}
-            />
-        </div>
-
-        <ExceptionDefinitions isOpen={showDefinitions} onToggle={() => setShowDefinitions(!showDefinitions)} userRole={currentUser.role} />
       
-        {/* Main Content Area */}
+        {/* View Content */}
         {renderActiveView()}
     </div>
   );
@@ -393,14 +394,13 @@ const FileTable: React.FC<{
     const [notifyingIds, setNotifyingIds] = useState<Set<string>>(new Set());
 
     const handleNotify = async (e: React.MouseEvent, instance: AppInstance) => {
-        e.stopPropagation(); // prevent row click
+        e.stopPropagation();
         setNotifyingIds(prev => new Set(prev).add(instance.id));
         try {
             await notifySre(instance.id);
             onUpdateInstance({ ...instance, isNotified: true });
         } catch (error) {
             console.error("Failed to notify SRE", error);
-            // In a real app, show a toast notification
         } finally {
             setNotifyingIds(prev => {
                 const newSet = new Set(prev);
@@ -431,7 +431,7 @@ const FileTable: React.FC<{
     };
 
     if (instances.length === 0) {
-        return <div className="text-center p-8 text-slate-500">No matching files found.</div>;
+        return <div className="text-center p-12 text-slate-500">No matching files found. Try adjusting your filters.</div>;
     }
 
     return (
@@ -439,10 +439,10 @@ const FileTable: React.FC<{
         <thead className="bg-slate-50">
             <tr>
                 {headers.map(header => (
-                    <th key={header.key} scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        <button onClick={() => onSort(header.key)} className="flex items-center">
+                    <th key={header.key} scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-tight">
+                        <button onClick={() => onSort(header.key)} className="flex items-center hover:text-slate-700">
                           {header.label}
-                          <span className="ml-1"><SortIndicator column={header.key} /></span>
+                          <span className="ml-1 opacity-60"><SortIndicator column={header.key} /></span>
                         </button>
                     </th>
                 ))}
@@ -450,50 +450,50 @@ const FileTable: React.FC<{
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
             {instances.map(instance => (
-                <tr key={instance.id} className="hover:bg-slate-50 transition-colors duration-150">
+                <tr key={instance.id} className="hover:bg-slate-50/80 transition-colors duration-150">
                     <td className="px-4 py-3 whitespace-nowrap">
-                        <a href="#" onClick={(e) => { e.preventDefault(); onSelectInstance(instance); }} className="font-medium text-sky-600 hover:underline">{instance.fileName}</a>
-                        <p className="text-xs text-slate-500 font-mono">{instance.id}</p>
+                        <a href="#" onClick={(e) => { e.preventDefault(); onSelectInstance(instance); }} className="font-semibold text-sky-600 hover:underline">{instance.fileName}</a>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{instance.id}</p>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap"><StatusIndicator status={instance.status} /></td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                        {instance.exceptionType ? <ExceptionChip type={instance.exceptionType} /> : <span className="text-slate-500">-</span>}
+                        {instance.exceptionType ? <ExceptionChip type={instance.exceptionType} /> : <span className="text-slate-300">-</span>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                        {instance.exceptionCode ? <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">{instance.exceptionCode}</span> : <span className="text-slate-500">-</span>}
+                        {instance.exceptionCode ? <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">{instance.exceptionCode}</span> : <span className="text-slate-300">-</span>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                         <TaskProgress completed={instance.completedTasks} total={instance.totalTasks} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-500">{instance.retryCount}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-700">{instance.saas}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-500">{formatDate(instance.startedAt)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-500">{instance.status === InstanceStatus.SUCCESS || instance.status === InstanceStatus.FAILED ? formatDate(instance.lastUpdatedAt) : '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-500">{calculateDuration(instance.startedAt, instance.lastUpdatedAt, instance.status)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono">{instance.retryCount}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-700 font-medium">{instance.saas}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">{formatDate(instance.startedAt)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">{instance.status === InstanceStatus.SUCCESS || instance.status === InstanceStatus.FAILED ? formatDate(instance.lastUpdatedAt) : '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono text-xs">{calculateDuration(instance.startedAt, instance.lastUpdatedAt, instance.status)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                        <a href="#" className="text-sky-600 hover:underline">{instance.applicationName}</a>
+                        <span className="text-sky-600 text-xs bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">{instance.applicationName}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center justify-end space-x-1">
                             {currentUser.role === UserRole.PLATFORM_SRE && instance.status === InstanceStatus.FAILED && instance.exceptionType === ExceptionType.BUSINESS && (
                                 instance.isNotified ? (
-                                    <div className="flex items-center text-xs text-green-600 p-1 rounded-md bg-green-50" title={`SaaS SRE Notified`}>
+                                    <div className="flex items-center text-[10px] text-green-600 px-2 py-1 rounded bg-green-50 border border-green-100" title={`SaaS SRE Notified`}>
                                         <CheckCircleIcon />
-                                        <span className="ml-1 font-medium">Notified</span>
+                                        <span className="ml-1 font-bold uppercase">Notified</span>
                                     </div>
                                 ) : (
                                     <button
                                         onClick={(e) => handleNotify(e, instance)}
                                         disabled={notifyingIds.has(instance.id)}
-                                        className="p-1.5 rounded-md text-slate-500 hover:bg-slate-200 hover:text-sky-600 disabled:opacity-50 disabled:cursor-wait"
+                                        className="p-1.5 rounded-md text-slate-400 hover:bg-slate-200 hover:text-sky-600 disabled:opacity-50"
                                         title="Notify SaaS SRE"
                                     >
                                         {notifyingIds.has(instance.id) ? <SpinnerIcon/> : <BellIcon />}
                                     </button>
                                 )
                             )}
-                            <button onClick={() => onSelectInstance(instance)} title="View Details" className="p-1.5 rounded-md text-slate-500 hover:bg-slate-200"><ArrowRightIcon /></button>
-                            <button title="Download File" className="p-1.5 rounded-md text-slate-500 hover:bg-slate-200"><DownloadIcon /></button>
+                            <button onClick={() => onSelectInstance(instance)} title="View Details" className="p-1.5 rounded-md text-slate-400 hover:bg-slate-200 hover:text-sky-600 transition-colors"><ArrowRightIcon /></button>
+                            <button title="Download File" className="p-1.5 rounded-md text-slate-400 hover:bg-slate-200 hover:text-sky-600 transition-colors"><DownloadIcon /></button>
                         </div>
                     </td>
                 </tr>
@@ -515,22 +515,22 @@ const Pagination: React.FC<{
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
     return (
-        <div className="px-4 py-3 flex items-center justify-between border-t border-slate-200 text-sm">
-            <div className="flex items-center space-x-2">
-                <select value={itemsPerPage} onChange={e => onItemsPerPageChange(Number(e.target.value))} className="border-slate-300 rounded-md text-sm p-1">
-                    <option value={10}>10 per page</option>
-                    <option value={20}>20 per page</option>
-                    <option value={50}>50 per page</option>
+        <div className="px-4 py-3 flex items-center justify-between border-t border-slate-100 bg-slate-50/30 text-xs font-medium">
+            <div className="flex items-center space-x-3">
+                <select value={itemsPerPage} onChange={e => onItemsPerPageChange(Number(e.target.value))} className="bg-white border border-slate-200 rounded px-1.5 py-1 text-slate-700 outline-none">
+                    <option value={10}>10 rows</option>
+                    <option value={20}>20 rows</option>
+                    <option value={50}>50 rows</option>
                 </select>
-                <span className="text-slate-600">
-                    {totalItems > 0 ? `Showing ${startItem} - ${endItem} of ${totalItems}` : 'No items'}
+                <span className="text-slate-500 uppercase tracking-tighter">
+                    {totalItems > 0 ? `Viewing ${startItem} - ${endItem} of ${totalItems}` : 'No records'}
                 </span>
             </div>
             
-            <div className="flex items-center space-x-2">
-                <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-1 rounded-md disabled:opacity-50 hover:bg-slate-100"><ChevronLeftIcon /></button>
-                <span>Page {currentPage} of {totalPages}</span>
-                <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-1 rounded-md disabled:opacity-50 hover:bg-slate-100"><ChevronRightIcon /></button>
+            <div className="flex items-center space-x-4">
+                <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-1 rounded bg-white border border-slate-200 shadow-sm disabled:opacity-30 hover:bg-slate-50"><ChevronLeftIcon /></button>
+                <span className="text-slate-600">Page {currentPage} / {totalPages}</span>
+                <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-1 rounded bg-white border border-slate-200 shadow-sm disabled:opacity-30 hover:bg-slate-50"><ChevronRightIcon /></button>
             </div>
         </div>
     );
@@ -544,15 +544,15 @@ const TabButton: React.FC<{
 }> = ({ name, active, onClick, notificationCount = 0 }) => (
     <button
         onClick={onClick}
-        className={`relative flex items-center py-2 px-1 border-b-2 font-semibold text-sm transition-colors ${
+        className={`relative flex items-center py-2 px-1 border-b-2 font-bold text-sm transition-colors uppercase tracking-tight ${
             active
                 ? 'border-sky-500 text-sky-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
         }`}
     >
         {name}
         {notificationCount > 0 && (
-            <span className="ml-2 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5">
+            <span className="ml-2 flex items-center justify-center bg-red-500 text-white text-[10px] font-black rounded-full h-4 w-4">
                 {notificationCount}
             </span>
         )}
@@ -562,17 +562,10 @@ const TabButton: React.FC<{
 
 // --- SHARED SUB-COMPONENTS ---
 const FilterDropdown: React.FC<{value: string, onChange: (v: string) => void, options: string[], label: string}> = ({value, onChange, options, label}) => (
-    <select value={value} onChange={e => onChange(e.target.value)} className="bg-white border border-slate-300 rounded-md pl-3 pr-8 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+    <select value={value} onChange={e => onChange(e.target.value)} className="bg-white border border-slate-300 rounded-md pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-sky-500 focus:outline-none">
         <option value="All">{label}: All</option>
         {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
     </select>
 );
-
-const Chip: React.FC<{ active: boolean, onClick: () => void, children: React.ReactNode }> = ({ active, onClick, children }) => (
-    <button onClick={onClick} className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${active ? 'bg-sky-600 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}>
-        {children}
-    </button>
-);
-
 
 export default FileProcessingDashboard;

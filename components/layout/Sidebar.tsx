@@ -12,7 +12,7 @@ const sidebarSections = [
   },
   {
     title: 'Console',
-    items: ['File Processing', 'Exceptions'],
+    items: ['File Processing', 'Exceptions', 'Folder Console'],
   },
 ];
 

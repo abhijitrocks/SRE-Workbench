@@ -51,7 +51,6 @@ export enum BusinessImpact {
   LOW = 'Low',
   MEDIUM = 'Medium',
   HIGH = 'High',
-  // Fix: Add 'CRITICAL' to support critical-level exceptions, resolving a type error in constants.ts.
   CRITICAL = 'Critical',
 }
 
@@ -225,4 +224,136 @@ export interface RequestHistoryEvent {
   remarks?: string;
   showTaskDetails?: boolean;
   type: 'review' | 'creation' | 'completion';
+}
+
+// --- FILE APPLICATION SPECIFICATION TYPES ---
+
+export type FileType = 'CSV' | 'JSON' | 'PARQUET';
+export type TriggerType = 'EVENT' | 'SCHEDULED' | 'API';
+export type SourceType = 'APPLICATION_FOLDER' | 'DB' | 'EXTERNAL_FOLDER';
+
+export interface FileAppSpec {
+  name: string;
+  fileType: FileType;
+  delimeter?: string;
+  trigger: {
+    triggerType: TriggerType;
+    scheduleCron?: string;
+    timezone?: string;
+  };
+  source?: {
+    type: SourceType;
+    outputFileName?: string;
+    dbConfig?: {
+      driverClass?: string;
+      jdbcUrl: string;
+      username: string;
+      password: string;
+      query: string;
+      fetchSize?: number;
+    };
+    externalConfig?: {
+      path: string;
+      regex?: string;
+      postScanMovePath?: string;
+    };
+  };
+  tasks: {
+    id: string;
+    protocol: string;
+    command: string;
+    parameters: Record<string, string>;
+  }[];
+  viewConfig?: {
+    summaryRenderFilePath?: string;
+    downloadFiles?: {
+      displayName: string;
+      filePath: string;
+    }[];
+  };
+  eventContext?: Record<string, string>;
+}
+
+// --- DIA CONSOLE TYPES ---
+
+export enum ResourceStatus {
+  ACTIVE = 'Active',
+  INACTIVE = 'Inactive',
+  DRAFT = 'Draft',
+}
+
+export interface DiaStorage {
+  resourceName: string;
+  tenantId: string;
+  storageName: string;
+  description: string;
+  type: 'SFTP' | 'CLOUD_STORAGE';
+  app: string;
+  status: ResourceStatus;
+  createdTs: string;
+  updatedTs: string;
+  cloudStorageParameters?: {
+    bucketName: string;
+    region: string;
+    prefix: string;
+  };
+  sftpParameters?: {
+    deltaURN: string;
+  };
+}
+
+export interface DiaUser {
+  resourceName: string;
+  tenantId: string;
+  userName: string;
+  description: string;
+  type: 'SYSTEM_USER' | 'EXTERNAL_USER';
+  app: string;
+  status: ResourceStatus;
+  createdTs: string;
+  updatedTs: string;
+  rbac: {
+    resource: string;
+  };
+  storageMount?: {
+    storageName: string;
+    mount: string;
+    permissions: string[];
+  }[];
+}
+
+export interface DiaFolder {
+  resourceName: string;
+  tenantId: string;
+  folderName: string;
+  folderType: 'FOLDER' | 'SMARTFOLDER';
+  path: string;
+  app: string;
+  username: string;
+  status: ResourceStatus;
+  createdTs: string;
+  updatedTs: string;
+  encryptionPublicKey?: string;
+  tags?: { key: string; value: string }[];
+  smartFolderDefinition?: {
+    criteria: 'TAG';
+    tags: { key: string; value: string }[];
+  };
+  fileApplication?: {
+    name: string;
+    inputArguments: { key: string; value: string }[];
+    overrideProperties?: {
+      cronExpression?: string;
+      timeZone?: string;
+    };
+  };
+}
+
+export interface FileExplorerItem {
+  id: string;
+  name: string;
+  type: 'folder' | 'file';
+  size?: string;
+  updatedAt: string;
+  items?: FileExplorerItem[];
 }

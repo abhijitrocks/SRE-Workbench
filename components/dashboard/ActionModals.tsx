@@ -89,16 +89,26 @@ interface ActionModalsProps {
 }
 
 const ActionModals: React.FC<ActionModalsProps> = ({ action, instance, task, user, onClose, onSuccess }) => {
-  const [reason, setReason] = useState('');
   const [skipCount, setSkipCount] = useState(1);
+  const [skipReason, setSkipReason] = useState('');
+  const [selectedCancelReason, setSelectedCancelReason] = useState('');
+  const [customCancelReason, setCustomCancelReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    if (action === 'Cancel' && !reason) {
-      setError('Reason for cancellation is mandatory.');
-      return;
+    let finalReason: string | undefined;
+
+    if (action === 'Cancel') {
+      finalReason = selectedCancelReason === 'Other' ? customCancelReason : selectedCancelReason;
+      if (!finalReason) {
+        setError('A reason for cancellation is mandatory.');
+        return;
+      }
+    } else if (action === 'Skip') {
+      finalReason = skipReason; // This is optional
     }
+
     setLoading(true);
     setError(null);
     try {
@@ -107,7 +117,7 @@ const ActionModals: React.FC<ActionModalsProps> = ({ action, instance, task, use
           taskId: task.id,
           action,
           user,
-          reason,
+          reason: finalReason,
           skipCount: action === 'Skip' ? skipCount : undefined
       });
       if (res.success) {
@@ -122,6 +132,11 @@ const ActionModals: React.FC<ActionModalsProps> = ({ action, instance, task, use
       setLoading(false);
     }
   };
+
+  const cancellationReasons = [
+    "File already being processed by a previous job.",
+    "Other",
+  ];
 
   const renderContent = () => {
     switch (action) {
@@ -144,16 +159,34 @@ const ActionModals: React.FC<ActionModalsProps> = ({ action, instance, task, use
             <div className="mt-4 space-y-3">
               <p className="text-sm text-slate-500">Please provide a reason for cancelling instance <span className="font-mono text-sky-600">{instance.id.split('-')[0]}...</span> This action is irreversible and will be audited.</p>
               <div>
-                <label htmlFor="reason" className="block text-sm font-medium text-slate-700">Reason for Cancel (Mandatory)</label>
-                <textarea
-                  id="reason"
-                  rows={3}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                <label htmlFor="reason-select" className="block text-sm font-medium text-slate-700">Reason for Cancel (Mandatory)</label>
+                <select
+                  id="reason-select"
+                  value={selectedCancelReason}
+                  onChange={(e) => setSelectedCancelReason(e.target.value)}
                   className="mt-1 block w-full rounded-md bg-slate-50 border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm text-slate-800"
-                  placeholder="e.g., Data issue identified, replaced by new instance XYZ..."
-                />
+                >
+                  <option value="" disabled>Select a reason...</option>
+                  {cancellationReasons.map(r => (
+                    <option key={r} value={r}>{r === 'Other' ? 'Other (please specify)' : r}</option>
+                  ))}
+                </select>
               </div>
+              {selectedCancelReason === 'Other' && (
+                <div>
+                  <label htmlFor="custom-reason" className="block text-sm font-medium text-slate-700">Please specify the reason</label>
+                  <textarea
+                    id="custom-reason"
+                    rows={3}
+                    value={customCancelReason}
+                    onChange={(e) => setCustomCancelReason(e.target.value)}
+                    maxLength={400}
+                    className="mt-1 block w-full rounded-md bg-slate-50 border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm text-slate-800"
+                    placeholder="e.g., Data issue identified, replaced by new instance XYZ..."
+                  />
+                  <p className="text-right text-xs text-slate-500 mt-1">{customCancelReason.length} / 400</p>
+                </div>
+              )}
             </div>
           </>
         );
@@ -178,8 +211,8 @@ const ActionModals: React.FC<ActionModalsProps> = ({ action, instance, task, use
                 <label htmlFor="reason-skip" className="block text-sm font-medium text-slate-700">Reason for Skipping</label>
                 <input
                   id="reason-skip"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  value={skipReason}
+                  onChange={(e) => setSkipReason(e.target.value)}
                   className="mt-1 block w-full rounded-md bg-slate-50 border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm text-slate-800"
                   placeholder="Optional: e.g., Malformed data from source"
                 />

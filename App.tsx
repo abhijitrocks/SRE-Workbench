@@ -10,6 +10,7 @@ import InstanceDetailView from './components/dashboard/InstanceDetailView';
 import ExceptionsDashboard from './components/exceptions/ExceptionsDashboard';
 import ExceptionDetailView from './components/exceptions/ExceptionDetailView';
 import TaskDetailView from './components/task/TaskDetailView';
+import FolderConsole from './components/folders/FolderConsole';
 
 const OpsCenterLogo = () => (
     <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-3">
@@ -197,6 +198,8 @@ const App: React.FC = () => {
             error={error}
           />
         );
+      case 'Folder Console':
+        return <FolderConsole tenant={currentTenant} />;
       default:
         return null;
     }
@@ -269,7 +272,7 @@ const App: React.FC = () => {
 
 
 // --- Inlined Workbench Components ---
-const BriefcaseIconWB = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
+const BriefcaseIconWB = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
 
 const WorkbenchCard: React.FC<{ title: string; description: string; id: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean;}> = ({ title, description, id, icon, onClick, disabled }) => {
   const cardClasses = `bg-white border border-slate-200 rounded-lg p-6 flex flex-col h-full shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-sky-500/50 transition-all duration-200 cursor-pointer'}`;

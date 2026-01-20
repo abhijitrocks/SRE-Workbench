@@ -1,7 +1,4 @@
 
-
-
-
 import { AppInstance, LogEntry, InstanceStatus, ScheduledJob, ScheduleStatus, BusinessImpact, ExceptionInstance, SystemRequest, AuditEventType, User, AuditEvent } from '../types';
 import { mockAppInstances, mockScheduledJobs, mockExceptionInstances, detailedExceptionInstance, mockSystemRequest } from '../constants';
 
@@ -11,6 +8,7 @@ const LATENCY = 500;
 export const getInstances = (): Promise<AppInstance[]> => {
   return new Promise(resolve => {
     setTimeout(() => {
+      // We now return all instances so summary counts for 'Completed' are accurate in Folders view.
       resolve(JSON.parse(JSON.stringify(mockAppInstances)));
     }, LATENCY);
   });
@@ -35,24 +33,18 @@ export const getExceptionInstances = (): Promise<ExceptionInstance[]> => {
 export const getExceptionInstance = (id: string): Promise<ExceptionInstance | undefined> => {
     return new Promise(resolve => {
         setTimeout(() => {
-            // Find the base exception instance from the mock list
             const instance = mockExceptionInstances.find(inst => inst.id === id);
 
             if (instance) {
-                // Create a detailed view by enriching the base data.
-                // This single logic path works for BOTH system and business exceptions,
-                // ensuring the 'requestId' is always carried over if it exists.
                 const detailedData: ExceptionInstance = {
                     ...instance,
                     exceptionDescription: instance.id === detailedExceptionInstance.id 
-                        ? detailedExceptionInstance.exceptionDescription // Use specific description for the main system exception
+                        ? detailedExceptionInstance.exceptionDescription 
                         : instance.description,
                     createdDate: instance.createdAt,
                     closureDate: null,
                     requestDefinitionCode: 'RQDZINZZ0201',
                     createdBy: { name: 'System', avatarChar: 'S' },
-                    // Use the specific rich payload for the original system exception, 
-                    // otherwise generate a generic mock one.
                     payload: instance.id === detailedExceptionInstance.id 
                         ? detailedExceptionInstance.payload 
                         : {
@@ -76,13 +68,10 @@ export const getExceptionInstance = (id: string): Promise<ExceptionInstance | un
 export const getSystemRequest = (requestId: string): Promise<SystemRequest | undefined> => {
     return new Promise(resolve => {
         setTimeout(() => {
-            // Find the exception that has this request ID to make the data consistent
             const exception = mockExceptionInstances.find(ex => ex.requestId === requestId);
             
             if (exception) {
                 const mockReq = JSON.parse(JSON.stringify(mockSystemRequest));
-                
-                // Customize the mock request based on the exception
                 mockReq.requestId = requestId;
                 mockReq.exceptionId = exception.id;
                 mockReq.title = `Recon Force Match - ${exception.name}`;
@@ -90,7 +79,6 @@ export const getSystemRequest = (requestId: string): Promise<SystemRequest | und
                 mockReq.exceptionDefinitionCode = exception.definitionCode;
                 mockReq.history[0].actionText = `is reviewing ${mockReq.title} request`;
                 mockReq.history[2].actionText = `created a new ${mockReq.title} request`;
-                
                 resolve(mockReq);
             } else {
                 resolve(undefined);
@@ -163,7 +151,6 @@ export const postInstanceAction = (options: PostActionOptions): Promise<{ succes
         return reject({ success: false, message: 'Task not found' });
       }
 
-      // Create and add the audit event
       const auditEvent: AuditEvent = {
         type: action,
         user: user.name,
@@ -173,7 +160,6 @@ export const postInstanceAction = (options: PostActionOptions): Promise<{ succes
         details: {},
       };
 
-      // Perform action-specific state changes
       switch (action) {
         case 'Resume':
           instance.status = InstanceStatus.IN_PROGRESS;
@@ -192,12 +178,10 @@ export const postInstanceAction = (options: PostActionOptions): Promise<{ succes
           auditEvent.details!.reason = reason;
           break;
         case 'Skip':
-          // For simplicity, we'll mark the task as successful and let the instance continue.
-          // In a real scenario, this would trigger more complex logic.
           task.status = InstanceStatus.SUCCESS;
           const failedIndex = instance.tasks.findIndex((t:any) => t.status === InstanceStatus.FAILED);
-          if (failedIndex === -1) { // If this was the last failed task
-             instance.status = InstanceStatus.IN_PROGRESS; // or logic to check if it's now completed
+          if (failedIndex === -1) {
+             instance.status = InstanceStatus.IN_PROGRESS;
           }
           auditEvent.details!.skipCount = skipCount;
           auditEvent.details!.reason = reason;
@@ -209,7 +193,6 @@ export const postInstanceAction = (options: PostActionOptions): Promise<{ succes
       }
       instance.auditTrail.push(auditEvent);
       
-      // Update the mock data source
       mockAppInstances[instanceIndex] = instance;
 
       resolve({ success: true, message: `Action '${action}' initiated successfully.`, updatedInstance: instance });
@@ -230,7 +213,7 @@ export const notifySre = (instanceId: string): Promise<{ success: boolean, updat
             
             const auditEvent: AuditEvent = {
                 type: 'Notify',
-                user: 'System', // Or the current user if they triggered it
+                user: 'System',
                 timestamp: new Date().toISOString(),
             };
             if (!instance.auditTrail) {
@@ -238,7 +221,6 @@ export const notifySre = (instanceId: string): Promise<{ success: boolean, updat
             }
             instance.auditTrail.push(auditEvent);
             
-            console.log(`SaaS SRE notified for instance ${instanceId}`);
             resolve({ success: true, updatedInstance: JSON.parse(JSON.stringify(instance)) });
         }, LATENCY);
     });
@@ -251,11 +233,8 @@ export const acknowledgeSchedule = (scheduleId: string, reason: string): Promise
             if (!schedule) {
                 return reject({ success: false, message: "Schedule not found" });
             }
-            console.log(`Acknowledging schedule ${scheduleId}. Reason: ${reason}`);
-            // In a real app, you'd properly recalculate the next run time based on the cron expression.
-            // For this mock, we'll just set it to some time in the future.
             const now = new Date();
-            schedule.nextExpectedRun = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(); // ~24h from now
+            schedule.nextExpectedRun = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
             schedule.status = ScheduleStatus.ON_SCHEDULE;
             
             resolve({ success: true, updatedSchedule: JSON.parse(JSON.stringify(schedule)) });
@@ -285,7 +264,6 @@ export const triggerScheduleNow = (scheduleId: string, reason: string): Promise<
             if (!schedule) {
                 return reject({ success: false, message: "Schedule not found" });
             }
-            console.log(`Manually triggering schedule ${scheduleId}. Reason: ${reason}`);
             const now = new Date();
             const newInstance: AppInstance = {
                 id: `manual-trig-${Date.now().toString().slice(-6)}`,
@@ -297,16 +275,15 @@ export const triggerScheduleNow = (scheduleId: string, reason: string): Promise<
                 customerWorkbench: getWorkbenchName(schedule.saas),
                 status: InstanceStatus.IN_PROGRESS,
                 tasks: [],
-                totalTasks: 8, // Example value
-                completedTasks: 1, // Example value
+                totalTasks: 8,
+                completedTasks: 1,
                 startedAt: now.toISOString(),
                 lastUpdatedAt: now.toISOString(),
                 retryCount: 0,
-                businessImpact: BusinessImpact.MEDIUM, // Example value
+                businessImpact: BusinessImpact.MEDIUM,
             };
             mockAppInstances.unshift(newInstance);
             
-            // Update the schedule's last run info
             schedule.lastRun = {
                 timestamp: now.toISOString(),
                 status: InstanceStatus.IN_PROGRESS,
