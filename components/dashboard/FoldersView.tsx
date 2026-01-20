@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { AppInstance, InstanceStatus, FileAppSpec, User, UserRole, ExceptionType, AuditEventType } from '../../types';
 import { mockFileAppSpecs } from '../../constants';
@@ -125,6 +126,7 @@ interface FolderStats {
     completed: number; 
     failed: number;
     running: number; 
+    cancelled: number;
 }
 
 interface AppGroup {
@@ -153,26 +155,27 @@ const FoldersView: React.FC<{
                     instances: [],
                     owner: inst.saas, 
                     description: `Standard file processing pipeline for ${inst.applicationName}...`,
-                    stats: { total: 0, completed: 0, failed: 0, running: 0 }
+                    stats: { total: 0, completed: 0, failed: 0, running: 0, cancelled: 0 }
                 };
             }
             const group = groups[inst.applicationName];
             group.instances.push(inst);
             group.stats.total++;
-            if (inst.status === InstanceStatus.SUCCESS || inst.status === InstanceStatus.CANCELLED) group.stats.completed++;
+            if (inst.status === InstanceStatus.SUCCESS) group.stats.completed++;
             else if (inst.status === InstanceStatus.FAILED) group.stats.failed++;
             else if (inst.status === InstanceStatus.IN_PROGRESS) group.stats.running++;
+            else if (inst.status === InstanceStatus.CANCELLED) group.stats.cancelled++;
         });
         return groups;
     }, [instances]);
 
     const availableOwners = useMemo(() => {
         const owners = new Set<string>();
-        Object.values(appRegistry).forEach(group => owners.add(group.owner));
+        // Fix: Explicitly typing the array from Object.values to avoid 'unknown' type error for 'owner' property
+        (Object.values(appRegistry) as AppGroup[]).forEach(group => owners.add(group.owner));
         return Array.from(owners).sort();
     }, [appRegistry]);
 
-    // Fix: Explicitly typing entry to avoid 'unknown' type error for 'owner' property when destructuring Object.entries.
     const filteredApps = useMemo(() => {
         const entries = Object.entries(appRegistry) as [string, AppGroup][];
         const filtered = ownerFilter === 'All' 
@@ -286,6 +289,12 @@ const FoldersView: React.FC<{
                                     color="text-blue-600" 
                                     onClick={() => handleOpenFolder(name, InstanceStatus.IN_PROGRESS)} 
                                 />
+                                <ClickableStat 
+                                    label="Cancelled" 
+                                    value={data.stats.cancelled} 
+                                    color="text-slate-500" 
+                                    onClick={() => handleOpenFolder(name, InstanceStatus.CANCELLED)} 
+                                />
                             </div>
                             <div className="h-10 w-px bg-slate-200 mr-6"></div>
                             <ChevronDownIcon 
@@ -334,9 +343,6 @@ const L2AppDetailView: React.FC<{
 
     const filteredInstances = useMemo(() => {
         if (!localFilter) return data.instances;
-        if (localFilter === InstanceStatus.SUCCESS) {
-            return data.instances.filter(i => i.status === InstanceStatus.SUCCESS || i.status === InstanceStatus.CANCELLED);
-        }
         return data.instances.filter(i => i.status === localFilter);
     }, [data.instances, localFilter]);
 
@@ -382,6 +388,13 @@ const L2AppDetailView: React.FC<{
                             color="text-blue-600" 
                             isActive={localFilter === InstanceStatus.IN_PROGRESS}
                             onClick={() => setLocalFilter(localFilter === InstanceStatus.IN_PROGRESS ? null : InstanceStatus.IN_PROGRESS)}
+                        />
+                         <L2InteractiveStat 
+                            label="Cancelled" 
+                            val={data.stats.cancelled} 
+                            color="text-slate-500" 
+                            isActive={localFilter === InstanceStatus.CANCELLED}
+                            onClick={() => setLocalFilter(localFilter === InstanceStatus.CANCELLED ? null : InstanceStatus.CANCELLED)}
                         />
                     </div>
                 </div>

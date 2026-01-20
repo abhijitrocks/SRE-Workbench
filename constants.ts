@@ -1,5 +1,5 @@
 
-import { AppInstance, InstanceStatus, User, UserRole, Zone, Tenant, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest, FileAppSpec, DiaStorage, DiaUser, DiaFolder, ResourceStatus } from './types';
+import { AppInstance, InstanceStatus, User, UserRole, Zone, Tenant, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest, FileAppSpec, DiaStorage, DiaUser, DiaFolder, ResourceStatus, Task } from './types';
 import { allSops } from './constants/exceptions';
 
 // Mock Users
@@ -159,7 +159,10 @@ const generateMockInstances = (): AppInstance[] => {
           detailedErrorMessage: 'SQL Error: failed to parse query results from DB source.',
           tasks: [
             { id: 't1', name: 'create-job-folder', status: InstanceStatus.SUCCESS, startTime: '2025-05-01T09:00:00Z', endTime: '2025-05-01T09:01:00Z', retryAttempts: 0 },
-            { id: 't2', name: 'move-input-file', status: InstanceStatus.FAILED, startTime: '2025-05-01T09:01:00Z', endTime: '2025-05-01T09:05:00Z', retryAttempts: 1, errorCode: 'IO_MOVE_ERR', errorMessage: 'Destination directory read-only' }
+            { id: 't2', name: 'move-input-file', status: InstanceStatus.FAILED, startTime: '2025-05-01T09:01:00Z', endTime: '2025-05-01T09:05:00Z', retryAttempts: 1, errorCode: 'IO_MOVE_ERR', errorMessage: 'Destination directory read-only' },
+            { id: 't3', name: 'decrypt', status: InstanceStatus.PENDING, startTime: '...', endTime: null, retryAttempts: 0 },
+            { id: 't4', name: 'validate-schema', status: InstanceStatus.PENDING, startTime: '...', endTime: null, retryAttempts: 0 },
+            { id: 't5', name: 'transform-records', status: InstanceStatus.PENDING, startTime: '...', endTime: null, retryAttempts: 0 }
           ]
       });
   }
@@ -175,8 +178,24 @@ const generateMockInstances = (): AppInstance[] => {
               { id: 't2', name: 'decrypt', status: InstanceStatus.SUCCESS, startTime: '...', endTime: '...', retryAttempts: 0 },
               { id: 't3', name: 'validate', status: InstanceStatus.SUCCESS, startTime: '...', endTime: '...', retryAttempts: 0 },
               { id: 't4', name: 'transform', status: InstanceStatus.IN_PROGRESS, startTime: '...', endTime: null, retryAttempts: 0 },
+              { id: 't5', name: 'notify-downstream', status: InstanceStatus.PENDING, startTime: '...', endTime: null, retryAttempts: 0 },
           ]
       });
+  }
+
+  // Add 5 Cancelled for sample
+  for(let i=1; i<=5; i++) {
+    instances.push({
+        id: `sample-c-${i}`, fileName: `Cancelled_Batch_X${i}.csv`,
+        saas, tenantId: tenant, zone, applicationName: sampleApp, status: InstanceStatus.CANCELLED,
+        totalTasks: 5, completedTasks: 1, startedAt: '2025-05-01T07:00:00Z', lastUpdatedAt: '2025-05-01T07:10:00Z',
+        retryCount: 0, businessImpact: BusinessImpact.LOW, tasks: [],
+        cancellationDetails: {
+            reason: 'Duplicate file detected by upstream system.',
+            user: 'System Automation',
+            timestamp: '2025-05-01T07:10:00Z'
+        }
+    });
   }
 
   // Add broad success data for other folders
@@ -184,12 +203,21 @@ const generateMockInstances = (): AppInstance[] => {
   otherApps.forEach(app => {
       // 5 Failed for each
       for(let i=1; i<=5; i++) {
+          const isClaims = app === 'Humana_ClaimsProcessing';
           instances.push({
             id: `${app}-f-${i}`, fileName: `${app}_Data_Err_${i}.json`,
             saas, tenantId: tenant, zone, applicationName: app, status: InstanceStatus.FAILED,
             totalTasks: 5, completedTasks: 1, startedAt: '2025-04-28T10:00:00Z', lastUpdatedAt: '2025-04-28T10:02:00Z',
-            retryCount: 0, businessImpact: BusinessImpact.MEDIUM, detailedErrorMessage: 'Validation error', tasks: [
-                { id: 't1', name: 'validate', status: InstanceStatus.FAILED, startTime: '...', endTime: '...', retryAttempts: 0, errorCode: 'VAL_ERR', errorMessage: 'Invalid format' }
+            retryCount: 0, businessImpact: BusinessImpact.MEDIUM, detailedErrorMessage: 'Validation error', 
+            tasks: isClaims ? [
+                { id: 't1', name: 'decrypt', status: InstanceStatus.SUCCESS, startTime: '2025-04-28T10:00:00Z', endTime: '2025-04-28T10:01:00Z', retryAttempts: 0 },
+                { id: 't2', name: 'validate-eligibility', status: InstanceStatus.FAILED, startTime: '2025-04-28T10:01:00Z', endTime: '2025-04-28T10:02:00Z', retryAttempts: 0, errorCode: 'VAL_ERR', errorMessage: 'Invalid format' },
+                { id: 't3', name: 'upload-to-s3', status: InstanceStatus.PENDING, startTime: '...', endTime: null, retryAttempts: 0 }
+            ] : [
+                { id: 't1', name: 'create-folder', status: InstanceStatus.SUCCESS, startTime: '2025-04-28T10:00:00Z', endTime: '2025-04-28T10:01:00Z', retryAttempts: 0 },
+                { id: 't2', name: 'record-deduplication', status: InstanceStatus.FAILED, startTime: '2025-04-28T10:01:00Z', endTime: '2025-04-28T10:02:00Z', retryAttempts: 0, errorCode: 'VAL_ERR', errorMessage: 'Invalid format' },
+                { id: 't3', name: 'transform-to-canonical', status: InstanceStatus.PENDING, startTime: '...', endTime: null, retryAttempts: 0 },
+                { id: 't4', name: 'push-to-webhook', status: InstanceStatus.PENDING, startTime: '...', endTime: null, retryAttempts: 0 }
             ]
           });
       }
@@ -202,6 +230,20 @@ const generateMockInstances = (): AppInstance[] => {
             totalTasks: 5, completedTasks: 5, startedAt: '2025-04-28T11:00:00Z', lastUpdatedAt: '2025-04-28T11:10:00Z',
             retryCount: 0, businessImpact: BusinessImpact.LOW, tasks: [], ...createSuccessData(`${app}-s-${i}`)
           });
+      }
+      // Add 2 Cancelled for each
+      for(let i=1; i<=2; i++) {
+        instances.push({
+            id: `${app}-c-${i}`, fileName: `${app}_Cancelled_${i}.json`,
+            saas, tenantId: tenant, zone, applicationName: app, status: InstanceStatus.CANCELLED,
+            totalTasks: 5, completedTasks: 1, startedAt: '2025-04-28T09:00:00Z', lastUpdatedAt: '2025-04-28T09:05:00Z',
+            retryCount: 0, businessImpact: BusinessImpact.LOW, tasks: [],
+            cancellationDetails: {
+                reason: 'Manual cancellation by admin.',
+                user: 'Alex Johnson',
+                timestamp: '2025-04-28T09:05:00Z'
+            }
+        });
       }
   });
 
