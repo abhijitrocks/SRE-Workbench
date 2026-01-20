@@ -158,7 +158,7 @@ const ScheduleL1View: React.FC<ScheduleL1ViewProps> = ({ tenant, onSelectSchedul
                         <th className="px-6 py-4">Schedule Name</th>
                         <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4">Frequency</th>
-                        <th className="px-6 py-4 text-center">Completed</th>
+                        <th className="px-6 py-4 text-center">Success</th>
                         <th className="px-6 py-4 text-center">Missed</th>
                         <th className="px-6 py-4 text-center">Failed</th>
                     </tr>
