@@ -161,6 +161,7 @@ const ScheduleL1View: React.FC<ScheduleL1ViewProps> = ({ tenant, onSelectSchedul
                         <th className="px-6 py-4 text-center">Success</th>
                         <th className="px-6 py-4 text-center">Missed</th>
                         <th className="px-6 py-4 text-center">Failed</th>
+                        <th className="px-6 py-4 text-center">Skipped</th>
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
