@@ -129,7 +129,7 @@ interface FolderStats {
     cancelled: number;
 }
 
-interface AppGroup {
+export interface AppGroup {
     instances: AppInstance[];
     stats: FolderStats;
     owner: string;
@@ -325,7 +325,7 @@ const ClickableStat = ({ label, value, color, onClick }: { label: string, value:
 );
 
 // --- L2 (Detail) VIEW ---
-const L2AppDetailView: React.FC<{ 
+export const L2AppDetailView: React.FC<{ 
     appName: string; 
     data: AppGroup; 
     initialFilter: InstanceStatus | null;

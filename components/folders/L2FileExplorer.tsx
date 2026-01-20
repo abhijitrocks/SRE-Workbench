@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { FileExplorerItem, DiaUser, DiaFolder } from '../../types';
+import { FileExplorerItem, DiaUser, DiaFolder, AppInstance } from '../../types';
 import { mockDiaUsers, mockDiaFolders } from '../../constants';
 
 // --- ICONS ---
@@ -13,10 +13,11 @@ const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" heig
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const AlertCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-amber-500"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
+const ActivityIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>;
 
 const getGenericSubItems = (prefix: string): FileExplorerItem[] => [
-    { id: `${prefix}-1`, name: `${prefix}_batch_2024.csv`, type: 'file', size: '1.4 MB', updatedAt: '2024-03-20T09:45:00Z' },
-    { id: `${prefix}-2`, name: `config_${prefix}.json`, type: 'file', size: '12 KB', updatedAt: '2024-03-20T09:50:00Z' },
+    { id: `${prefix}-1`, name: `Completed_Batch_9901.csv`, type: 'file', size: '1.4 MB', updatedAt: '2024-03-20T09:45:00Z' },
+    { id: `${prefix}-2`, name: `Failed_Upload_E901.csv`, type: 'file', size: '12 KB', updatedAt: '2024-03-20T09:50:00Z' },
     { id: `${prefix}-3`, name: 'archive', type: 'folder', updatedAt: '2024-03-18T15:00:00Z', items: [
       { id: `${prefix}-3-1`, name: 'historical_data.zip', type: 'file', size: '45.0 MB', updatedAt: '2024-03-10T12:00:00Z' }
     ]}
@@ -25,9 +26,11 @@ const getGenericSubItems = (prefix: string): FileExplorerItem[] => [
 interface L2FileExplorerProps {
   resource: { type: 'user' | 'folder', id: string, name: string };
   onBack: () => void;
+  onSelectInstance: (instance: AppInstance | { id: string }) => void;
+  instances: AppInstance[];
 }
 
-const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack }) => {
+const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSelectInstance, instances }) => {
   const userObj = useMemo(() => mockDiaUsers.find(u => u.resourceName === resource.id), [resource]);
   const folderObj = useMemo(() => mockDiaFolders.find(f => f.resourceName === resource.id), [resource]);
 
@@ -57,7 +60,6 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack }) => 
           };
         });
       }
-      // If user is selected but has NO MOUNTS, return empty
       return [];
     } else if (resource.type === 'folder' && folderObj) {
         return [
@@ -100,6 +102,11 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack }) => 
     return aliases;
   }, [resource.type, folderObj]);
 
+  const linkedInstance = useMemo(() => {
+      if (!selectedItem || selectedItem.type !== 'file') return null;
+      return instances.find(inst => inst.fileName === selectedItem.name);
+  }, [selectedItem, instances]);
+
   const navigateTo = (item: FileExplorerItem) => {
     if (item.type === 'folder' && item.items) {
       setPath([...path, item]);
@@ -123,7 +130,6 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack }) => 
     setSelectedItem(null);
   };
 
-  // Determine column header dynamically
   const thirdColumnHeader = (resource.type === 'user' && isAtRoot && hasActiveMounts) ? 'Mount Path & Access' : 'Size';
 
   return (
@@ -172,7 +178,6 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack }) => 
 
         <div className="flex-1 flex overflow-hidden">
             <div className="w-2/3 border-r border-slate-200 overflow-y-auto">
-                {/* Simplified Environment Banner */}
                 {resource.type === 'user' && isAtRoot && (
                     <div className="bg-sky-50/50 px-6 py-4 border-b border-sky-100">
                         <div className="flex items-start">
@@ -217,6 +222,11 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack }) => 
                                                         <LinkIcon /> <span>Mapped to: <span className="text-sky-600 font-bold">{item.mountStorageName}</span></span>
                                                     </div>
                                                 )}
+                                                {item.type === 'file' && instances.some(inst => inst.fileName === item.name) && (
+                                                    <div className="flex items-center text-[9px] text-sky-600 font-black uppercase mt-0.5">
+                                                        <ActivityIcon /> <span>Processing Linked</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </td>
@@ -254,6 +264,31 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack }) => 
                                 {(selectedItem || currentMountContext)?.isMount ? 'Storage Mount Point' : (selectedItem?.type || 'Registry Folder')}
                             </span>
                         </div>
+
+                        {linkedInstance && (
+                            <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 shadow-sm">
+                                <h4 className="text-[10px] font-black text-sky-600 uppercase tracking-widest mb-3 flex items-center"><ActivityIcon /> Processing Context</h4>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500">Instance ID:</span>
+                                        <span className="font-mono font-bold text-slate-700">{linkedInstance.id.substring(0,12)}...</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500">Current Status:</span>
+                                        <span className={`font-black uppercase text-[10px] px-2 py-0.5 rounded-full ${
+                                            linkedInstance.status === 'Success' ? 'bg-green-100 text-green-700' : 
+                                            linkedInstance.status === 'Failed' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                                        }`}>{linkedInstance.status}</span>
+                                    </div>
+                                    <button 
+                                        onClick={() => onSelectInstance(linkedInstance)}
+                                        className="w-full mt-2 bg-white border border-sky-200 text-sky-600 py-2 px-3 rounded-lg text-xs font-bold hover:bg-sky-600 hover:text-white transition-all shadow-sm flex items-center justify-center"
+                                    >
+                                        Jump to Instance View
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {resource.type === 'folder' && isAtRoot && folderAliases.length > 0 && (
                             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">

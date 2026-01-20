@@ -1,5 +1,5 @@
 
-import { AppInstance, InstanceStatus, User, UserRole, Zone, Tenant, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest, FileAppSpec, DiaStorage, DiaUser, DiaFolder, ResourceStatus, Task } from './types';
+import { AppInstance, InstanceStatus, User, UserRole, Zone, Tenant, BusinessImpact, ExceptionType, SOP, SummaryMetrics, ProcessingStage, OutputFile, ScheduledJob, ScheduleStatus, ExceptionInstance, SystemRequest, FileAppSpec, DiaStorage, DiaUser, DiaFolder, ResourceStatus, Task, ScheduleDefinition, ScheduleExecution, ScheduleRunStatus } from './types';
 import { allSops } from './constants/exceptions';
 
 // Mock Users
@@ -513,7 +513,11 @@ export const mockDiaFolders: DiaFolder[] = [
     username: 'mondo_app_user',
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-01T00:00:00Z',
-    updatedTs: '2024-03-20T10:00:00Z'
+    updatedTs: '2024-03-20T10:00:00Z',
+    fileApplication: {
+      name: 'Humana_ClaimsProcessing',
+      inputArguments: []
+    }
   },
   {
     resourceName: 'FOLD-004',
@@ -525,7 +529,11 @@ export const mockDiaFolders: DiaFolder[] = [
     username: 'mondo_app_user',
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-05T00:00:00Z',
-    updatedTs: '2024-03-20T10:00:00Z'
+    updatedTs: '2024-03-20T10:00:00Z',
+    fileApplication: {
+      name: 'Humana_ClaimsProcessing',
+      inputArguments: []
+    }
   },
   {
     resourceName: 'FOLD-005',
@@ -537,7 +545,11 @@ export const mockDiaFolders: DiaFolder[] = [
     username: 'mondo_app_user',
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-10T00:00:00Z',
-    updatedTs: '2024-03-20T10:00:00Z'
+    updatedTs: '2024-03-20T10:00:00Z',
+    fileApplication: {
+      name: 'sample-file-application',
+      inputArguments: []
+    }
   },
   {
     resourceName: 'FOLD-002',
@@ -553,6 +565,10 @@ export const mockDiaFolders: DiaFolder[] = [
     smartFolderDefinition: {
         criteria: 'TAG',
         tags: [{ key: 'env', value: 'stress' }]
+    },
+    fileApplication: {
+      name: 'enrollment-eligibility',
+      inputArguments: []
     }
   },
   {
@@ -565,6 +581,60 @@ export const mockDiaFolders: DiaFolder[] = [
     username: 'lsg_external_client',
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-20T08:30:00Z',
-    updatedTs: '2024-03-19T10:20:00Z'
+    updatedTs: '2024-03-19T10:20:00Z',
+    fileApplication: {
+      name: 'Humana_ClaimsProcessing',
+      inputArguments: []
+    }
   }
+];
+
+// --- NEW SCHEDULE CONSOLE MOCK DATA ---
+
+export const mockScheduleDefinitions: ScheduleDefinition[] = [
+  {
+    id: 'SCH-001',
+    name: 'Nightly_Mondo_Recon',
+    tenantId: 'mondo',
+    description: 'Reconciles inbound bank files with internal ledger records. Triggered nightly.',
+    cronFrequency: '0 1 * * *',
+    owner: 'mondo_app_user',
+    timezone: 'UTC',
+    appId: 'Humana_ClaimsProcessing',
+    stats: { completed: 28, missed: 2, failed: 1 }
+  },
+  {
+    id: 'SCH-002',
+    name: 'Perf_Stress_Monitor',
+    tenantId: 'perf-test-tenant-05',
+    description: 'Polls stress testing environment metrics every 15 minutes.',
+    cronFrequency: '*/15 * * * *',
+    owner: 'perf_tester_svc',
+    timezone: 'EST',
+    appId: 'enrollment-eligibility',
+    stats: { completed: 142, missed: 0, failed: 4 }
+  },
+  {
+    id: 'SCH-003',
+    name: 'LSG_Inbound_Scan',
+    tenantId: '15163',
+    description: 'Scans secure SFTP landing zone for new client uploads hourly.',
+    cronFrequency: '0 * * * *',
+    owner: 'lsg_external_client',
+    timezone: 'GMT',
+    appId: 'Humana_ClaimsProcessing',
+    stats: { completed: 520, missed: 12, failed: 0 }
+  }
+];
+
+export const mockScheduleExecutions: ScheduleExecution[] = [
+  { id: 'EXE-1001', scheduleId: 'SCH-001', expectedTime: '2024-03-21T01:00:00Z', actualTime: '2024-03-21T01:00:05Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-1002', scheduleId: 'SCH-001', expectedTime: '2024-03-20T01:00:00Z', actualTime: null, status: ScheduleRunStatus.MISSED },
+  { id: 'EXE-1003', scheduleId: 'SCH-001', expectedTime: '2024-03-19T01:00:00Z', actualTime: '2024-03-19T01:02:14Z', status: ScheduleRunStatus.FAILED },
+  { id: 'EXE-1004', scheduleId: 'SCH-001', expectedTime: '2024-03-18T01:00:00Z', actualTime: '2024-03-18T01:00:02Z', status: ScheduleRunStatus.SUCCESS },
+  
+  { id: 'EXE-2001', scheduleId: 'SCH-002', expectedTime: '2024-03-21T14:15:00Z', actualTime: '2024-03-21T14:15:10Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-2002', scheduleId: 'SCH-002', expectedTime: '2024-03-21T14:00:00Z', actualTime: '2024-03-21T14:00:05Z', status: ScheduleRunStatus.SUCCESS },
+  { id: 'EXE-2003', scheduleId: 'SCH-002', expectedTime: '2024-03-21T13:45:00Z', actualTime: '2024-03-21T13:46:20Z', status: ScheduleRunStatus.FAILED },
+  { id: 'EXE-2004', scheduleId: 'SCH-002', expectedTime: '2024-03-21T13:30:00Z', actualTime: '2024-03-21T13:30:00Z', status: ScheduleRunStatus.SKIPPED },
 ];

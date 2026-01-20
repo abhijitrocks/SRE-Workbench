@@ -11,6 +11,7 @@ import ExceptionsDashboard from './components/exceptions/ExceptionsDashboard';
 import ExceptionDetailView from './components/exceptions/ExceptionDetailView';
 import TaskDetailView from './components/task/TaskDetailView';
 import FolderConsole from './components/folders/FolderConsole';
+import ScheduleConsole from './components/schedules/ScheduleConsole';
 
 const OpsCenterLogo = () => (
     <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-3">
@@ -102,10 +103,10 @@ const App: React.FC = () => {
 
   }, [instances, scheduledJobs, currentZone, currentTenant, currentUser, activeWorkbench]);
 
-  const handleSelectInstance = (instance: AppInstance | null) => {
+  const handleSelectInstance = (instance: AppInstance | null | { id: string }) => {
     if (instance) {
       const fullInstance = instances.find(i => i.id === instance.id);
-      setSelectedInstance(fullInstance || instance);
+      setSelectedInstance(fullInstance || (instance as AppInstance));
     } else {
       setSelectedInstance(null);
     }
@@ -199,7 +200,17 @@ const App: React.FC = () => {
           />
         );
       case 'Folder Console':
-        return <FolderConsole tenant={currentTenant} />;
+        return (
+          <FolderConsole 
+            tenant={currentTenant} 
+            instances={instances}
+            currentUser={currentUser!}
+            onUpdateInstance={handleUpdateInstance}
+            onSelectInstance={handleSelectInstance}
+          />
+        );
+      case 'Schedule':
+        return <ScheduleConsole tenant={currentTenant} />;
       default:
         return null;
     }

@@ -14,7 +14,7 @@ const FilterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" heig
 const FolderPanel: React.FC<{ 
   tenant: Tenant; 
   initialUserFilter: string | null;
-  onDrillDown: (type: 'user' | 'folder', id: string, name: string) => void;
+  onDrillDown: (type: 'user' | 'folder' | 'app', id: string, name: string) => void;
 }> = ({ tenant, initialUserFilter, onDrillDown }) => {
   const [tenantIdFilter, setTenantIdFilter] = useState('All');
   const [userNameFilter, setUserNameFilter] = useState(initialUserFilter || 'All');
@@ -66,8 +66,6 @@ const FolderPanel: React.FC<{
     const aliases: { user: string; path: string }[] = [];
     mockDiaUsers.forEach(user => {
       user.storageMount?.forEach(mount => {
-        // Logic: if the user's storage target matches the folder's owner and the mount alias is logically linked
-        // In this mock, we correlate based on path matching suffix or direct owner mapping
         if (user.userName === folder.username && folder.path.endsWith(mount.mount)) {
            aliases.push({ user: user.userName, path: mount.mount });
         }
@@ -216,7 +214,12 @@ const FolderPanel: React.FC<{
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                      {folder.fileApplication ? (
-                         <span className="text-sky-600 font-bold text-xs bg-sky-50 px-2 py-0.5 rounded border border-sky-100">{folder.fileApplication.name}</span>
+                         <button 
+                            onClick={() => onDrillDown('app', folder.fileApplication!.name, folder.fileApplication!.name)}
+                            className="text-sky-600 font-bold text-xs bg-sky-50 px-2 py-0.5 rounded border border-sky-100 hover:bg-sky-100 transition-colors shadow-sm"
+                         >
+                            {folder.fileApplication.name}
+                         </button>
                      ) : (
                          <span className="text-slate-300">-</span>
                      )}

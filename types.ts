@@ -362,3 +362,36 @@ export interface FileExplorerItem {
   mountStorageName?: string;
   mountPermissions?: string[];
 }
+
+// --- NEW SCHEDULE CONSOLE TYPES ---
+
+export interface ScheduleDefinition {
+  id: string;
+  name: string;
+  tenantId: string;
+  description: string;
+  cronFrequency: string;
+  owner: string;
+  timezone: string;
+  appId: string;
+  stats: {
+    completed: number;
+    missed: number;
+    failed: number;
+  };
+}
+
+export enum ScheduleRunStatus {
+  SUCCESS = 'Success',
+  FAILED = 'Failed',
+  MISSED = 'Missed',
+  SKIPPED = 'Skipped',
+}
+
+export interface ScheduleExecution {
+  id: string;
+  scheduleId: string;
+  expectedTime: string;
+  actualTime: string | null;
+  status: ScheduleRunStatus;
+}
