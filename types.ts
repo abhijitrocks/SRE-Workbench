@@ -356,4 +356,9 @@ export interface FileExplorerItem {
   size?: string;
   updatedAt: string;
   items?: FileExplorerItem[];
+  // For mount-aware exploration
+  isMount?: boolean;
+  mountPath?: string;
+  mountStorageName?: string;
+  mountPermissions?: string[];
 }

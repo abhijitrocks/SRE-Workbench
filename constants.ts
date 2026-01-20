@@ -423,6 +423,30 @@ export const mockDiaStorages: DiaStorage[] = [
     createdTs: '2024-01-01T00:00:00Z',
     updatedTs: '2024-03-20T10:00:00Z',
     cloudStorageParameters: { bucketName: 'humana-claims-landing', region: 'us-east-1', prefix: 'inbound/' }
+  },
+  {
+    resourceName: 'STOR-002',
+    tenantId: 'perf-test-tenant-05',
+    storageName: 'PERF_METRICS_STORE',
+    description: 'Performance testing results',
+    type: 'CLOUD_STORAGE',
+    app: 'enrollment-eligibility',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-02-15T09:00:00Z',
+    updatedTs: '2024-03-22T14:30:00Z',
+    cloudStorageParameters: { bucketName: 'perf-results-bucket', region: 'us-west-2', prefix: 'raw/' }
+  },
+  {
+    resourceName: 'STOR-003',
+    tenantId: '15163',
+    storageName: 'LSG_INBOUND_SFTP',
+    description: 'Main SFTP for LSG',
+    type: 'SFTP',
+    app: 'Humana_ClaimsProcessing',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-01-10T12:00:00Z',
+    updatedTs: '2024-03-18T11:00:00Z',
+    sftpParameters: { deltaURN: 'urn:delta:sftp:lsg-main' }
   }
 ];
 
@@ -432,13 +456,42 @@ export const mockDiaUsers: DiaUser[] = [
     resourceName: 'USER-001',
     tenantId: 'mondo',
     userName: 'mondo_app_user',
-    description: 'App user',
+    description: 'App user with broad multi-folder permissions',
     type: 'SYSTEM_USER',
     app: 'Humana_ClaimsProcessing',
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-01T00:00:00Z',
     updatedTs: '2024-03-20T10:00:00Z',
-    rbac: { resource: 'STOR-001' }
+    rbac: { resource: 'STOR-001' },
+    storageMount: [
+        { storageName: 'S3_LANDING_BUCKET', mount: '/inbound', permissions: ['READ', 'WRITE'] },
+        { storageName: 'S3_LANDING_BUCKET', mount: '/processing', permissions: ['READ'] },
+        { storageName: 'GLACIER_ARCHIVE', mount: '/vault', permissions: ['WRITE'] }
+    ]
+  },
+  {
+    resourceName: 'USER-002',
+    tenantId: 'perf-test-tenant-05',
+    userName: 'perf_tester_svc',
+    description: 'Automation user for performance tests',
+    type: 'SYSTEM_USER',
+    app: 'enrollment-eligibility',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-02-15T10:00:00Z',
+    updatedTs: '2024-02-15T10:00:00Z',
+    rbac: { resource: 'STOR-002' }
+  },
+  {
+    resourceName: 'USER-003',
+    tenantId: '15163',
+    userName: 'lsg_external_client',
+    description: 'External client access',
+    type: 'EXTERNAL_USER',
+    app: 'Humana_ClaimsProcessing',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-01-15T16:00:00Z',
+    updatedTs: '2024-03-10T09:00:00Z',
+    rbac: { resource: 'STOR-003' }
   }
 ];
 
@@ -455,5 +508,57 @@ export const mockDiaFolders: DiaFolder[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-01T00:00:00Z',
     updatedTs: '2024-03-20T10:00:00Z'
+  },
+  {
+    resourceName: 'FOLD-004',
+    tenantId: 'mondo',
+    folderName: 'Mondo_Processing_Workdir',
+    folderType: 'FOLDER',
+    path: '/apps/mondo/processing',
+    app: 'Humana_ClaimsProcessing',
+    username: 'mondo_app_user',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-01-05T00:00:00Z',
+    updatedTs: '2024-03-20T10:00:00Z'
+  },
+  {
+    resourceName: 'FOLD-005',
+    tenantId: 'mondo',
+    folderName: 'Mondo_Archive_Vault',
+    folderType: 'FOLDER',
+    path: '/apps/mondo/vault',
+    app: 'Humana_ClaimsProcessing',
+    username: 'mondo_app_user',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-01-10T00:00:00Z',
+    updatedTs: '2024-03-20T10:00:00Z'
+  },
+  {
+    resourceName: 'FOLD-002',
+    tenantId: 'perf-test-tenant-05',
+    folderName: 'Perf_Workdir',
+    folderType: 'SMARTFOLDER',
+    path: '/dia/perf/workdir',
+    app: 'enrollment-eligibility',
+    username: 'perf_tester_svc',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-02-20T11:00:00Z',
+    updatedTs: '2024-03-15T13:45:00Z',
+    smartFolderDefinition: {
+        criteria: 'TAG',
+        tags: [{ key: 'env', value: 'stress' }]
+    }
+  },
+  {
+    resourceName: 'FOLD-003',
+    tenantId: '15163',
+    folderName: 'LSG_Secure_Uploads',
+    folderType: 'FOLDER',
+    path: '/mnt/lsg/secure',
+    app: 'Humana_ClaimsProcessing',
+    username: 'lsg_external_client',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-01-20T08:30:00Z',
+    updatedTs: '2024-03-19T10:20:00Z'
   }
 ];

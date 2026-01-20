@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Tenant, DiaFolder, ResourceStatus } from '../../types';
-import { mockDiaFolders, mockTenants } from '../../constants';
+import { Tenant, DiaFolder, ResourceStatus, DiaUser } from '../../types';
+import { mockDiaFolders, mockTenants, mockDiaUsers } from '../../constants';
 import SpecYamlViewerModal from './SpecYamlViewerModal';
 
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-400"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>;
@@ -60,6 +60,21 @@ const FolderPanel: React.FC<{
       .filter(f => statusFilter === 'All' || f.status === statusFilter)
       .filter(f => fileAppFilter === 'All' || (f.fileApplication?.name === fileAppFilter));
   }, [tenant, tenantIdFilter, userNameFilter, folderNameFilter, folderPathFilter, statusFilter, fileAppFilter]);
+
+  // Function to find all mount paths for a specific registry folder across all users
+  const getMountAliases = (folder: DiaFolder) => {
+    const aliases: { user: string; path: string }[] = [];
+    mockDiaUsers.forEach(user => {
+      user.storageMount?.forEach(mount => {
+        // Logic: if the user's storage target matches the folder's owner and the mount alias is logically linked
+        // In this mock, we correlate based on path matching suffix or direct owner mapping
+        if (user.userName === folder.username && folder.path.endsWith(mount.mount)) {
+           aliases.push({ user: user.userName, path: mount.mount });
+        }
+      });
+    });
+    return aliases;
+  };
 
   const resetFilters = () => {
     setTenantIdFilter('All');
@@ -159,64 +174,74 @@ const FolderPanel: React.FC<{
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Tenant Id</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Folder Name</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Owner</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Created at</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Updated at</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Mount Aliases</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">File App</th>
               <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
-            {filteredFolders.map((folder) => (
-              <tr key={folder.resourceName} className="hover:bg-slate-50 transition-colors group">
-                <td className="px-6 py-4 whitespace-nowrap font-mono text-slate-600">{folder.tenantId}</td>
-                <td 
-                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-amber-50/50"
-                  onClick={() => setSelectedSpec(folder)}
-                >
-                  <div className="flex items-center">
-                    {folder.folderType === 'FOLDER' ? <FolderIcon /> : <SmartFolderIcon />}
-                    <div className="ml-3">
-                        <span className="font-bold text-slate-900 block group-hover:text-amber-600 transition-colors">{folder.folderName}</span>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{folder.folderType}</span>
+            {filteredFolders.map((folder) => {
+              const aliases = getMountAliases(folder);
+              return (
+                <tr key={folder.resourceName} className="hover:bg-slate-50 transition-colors group">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-slate-600">{folder.tenantId}</td>
+                  <td 
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-amber-50/50"
+                    onClick={() => setSelectedSpec(folder)}
+                  >
+                    <div className="flex items-center">
+                      {folder.folderType === 'FOLDER' ? <FolderIcon /> : <SmartFolderIcon />}
+                      <div className="ml-3">
+                          <span className="font-bold text-slate-900 block group-hover:text-amber-600 transition-colors">{folder.folderName}</span>
+                          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{folder.folderType}</span>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-slate-700 font-medium">{folder.username}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-slate-500">{new Date(folder.createdTs).toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-slate-500">{new Date(folder.updatedTs).toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs font-bold rounded-full ${folder.status === ResourceStatus.ACTIVE ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                    {folder.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                   {folder.fileApplication ? (
-                       <span className="text-sky-600 font-bold text-xs bg-sky-50 px-2 py-0.5 rounded border border-sky-100">{folder.fileApplication.name}</span>
-                   ) : (
-                       <span className="text-slate-300">-</span>
-                   )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <div className="flex items-center justify-end space-x-2">
-                    <button 
-                        onClick={() => onDrillDown('folder', folder.resourceName, folder.folderName)}
-                        className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                        title="Explore Folder Contents"
-                    >
-                        <DrillIcon />
-                    </button>
-                    <button 
-                        onClick={() => setSelectedSpec(folder)}
-                        className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                        title="View Spec"
-                    >
-                        <CodeIcon />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-700 font-medium">{folder.username}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {aliases.map((a, i) => (
+                        <span key={i} className="bg-indigo-50 text-indigo-700 text-[10px] font-black font-mono border border-indigo-100 px-1.5 py-0.5 rounded" title={`Mounted by ${a.user}`}>
+                          {a.path}
+                        </span>
+                      ))}
+                      {aliases.length === 0 && <span className="text-slate-300 italic text-xs">No active mounts</span>}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${folder.status === ResourceStatus.ACTIVE ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {folder.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                     {folder.fileApplication ? (
+                         <span className="text-sky-600 font-bold text-xs bg-sky-50 px-2 py-0.5 rounded border border-sky-100">{folder.fileApplication.name}</span>
+                     ) : (
+                         <span className="text-slate-300">-</span>
+                     )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      <button 
+                          onClick={() => onDrillDown('folder', folder.resourceName, folder.folderName)}
+                          className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                          title="Explore Folder Contents"
+                      >
+                          <DrillIcon />
+                      </button>
+                      <button 
+                          onClick={() => setSelectedSpec(folder)}
+                          className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                          title="View Spec"
+                      >
+                          <CodeIcon />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {filteredFolders.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-6 py-12 text-center text-slate-500 italic">No folders found matching filters.</td>
