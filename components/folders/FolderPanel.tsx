@@ -61,16 +61,32 @@ const FolderPanel: React.FC<{
       .filter(f => fileAppFilter === 'All' || (f.fileApplication?.name === fileAppFilter));
   }, [tenant, tenantIdFilter, userNameFilter, folderNameFilter, folderPathFilter, statusFilter, fileAppFilter]);
 
-  // Function to find all mount paths for a specific registry folder across all users
+  // Robust matching for multiple mount aliases
   const getMountAliases = (folder: DiaFolder) => {
     const aliases: { user: string; path: string }[] = [];
+    const coreKeywords = ['inbound', 'processing', 'vault', 'archive', 'secure', 'workdir'];
+    
     mockDiaUsers.forEach(user => {
-      user.storageMount?.forEach(mount => {
-        if (user.userName === folder.username && folder.path.endsWith(mount.mount)) {
-           aliases.push({ user: user.userName, path: mount.mount });
-        }
-      });
+      // Heuristic: If they belong to the same app context, we check if their mount logic aligns with this folder
+      if (user.app === folder.app) {
+          user.storageMount?.forEach(mount => {
+            const mPath = mount.mount.toLowerCase();
+            const fPath = folder.path.toLowerCase();
+            
+            // Check 1: Direct string overlap (e.g., mount '/inbound' is found in physical path '/.../inbound')
+            const mountSlug = mPath.replace(/^\/|\/$/g, ''); // strip leading/trailing slashes
+            
+            // Check 2: Core keyword intersection (e.g., both contain 'inbound')
+            const hasKeywordOverlap = coreKeywords.some(kw => fPath.includes(kw) && mPath.includes(kw));
+
+            if ((mountSlug && fPath.includes(mountSlug)) || hasKeywordOverlap) {
+               aliases.push({ user: user.userName, path: mount.mount });
+            }
+          });
+      }
     });
+    
+    // De-duplicate same path used by multiple users if necessary, but here we want to see the aliases
     return aliases;
   };
 
@@ -198,9 +214,9 @@ const FolderPanel: React.FC<{
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-700 font-medium">{folder.username}</td>
                   <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 max-w-[250px]">
                       {aliases.map((a, i) => (
-                        <span key={i} className="bg-indigo-50 text-indigo-700 text-[10px] font-black font-mono border border-indigo-100 px-1.5 py-0.5 rounded" title={`Mounted by ${a.user}`}>
+                        <span key={i} className="bg-indigo-50 text-indigo-700 text-[10px] font-black font-mono border border-indigo-100 px-1.5 py-0.5 rounded cursor-help" title={`Mounted by ${a.user}`}>
                           {a.path}
                         </span>
                       ))}

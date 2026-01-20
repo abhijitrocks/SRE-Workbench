@@ -77,30 +77,47 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
     return currentItems.some(item => item.isMount);
   }, [currentItems]);
 
-  const currentMountContext = useMemo(() => {
-    if (resource.type === 'folder' && folderObj) {
-        const userWithMount = mockDiaUsers.find(u => u.userName === folderObj.username);
-        const mount = userWithMount?.storageMount?.find(m => folderObj.path.endsWith(m.mount));
-        if (mount) {
-            return { name: folderObj.folderName, isMount: true, mountPath: mount.mount, mountStorageName: mount.storageName };
-        }
-    }
-    if (path.length === 0) return null;
-    return path[0]; 
-  }, [path, resource, folderObj]);
-
+  // Robust discovery of all aliases for the current folder view
   const folderAliases = useMemo(() => {
     if (resource.type !== 'folder' || !folderObj) return [];
-    const aliases: { user: string; path: string }[] = [];
+    const aliases: { user: string; path: string; isPrimary: boolean }[] = [];
+    const coreKeywords = ['inbound', 'processing', 'vault', 'archive', 'secure', 'workdir'];
+    
     mockDiaUsers.forEach(user => {
-      user.storageMount?.forEach(mount => {
-        if (user.userName === folderObj.username && folderObj.path.endsWith(mount.mount)) {
-           aliases.push({ user: user.userName, path: mount.mount });
-        }
-      });
+      if (user.app === folderObj.app) {
+          user.storageMount?.forEach(mount => {
+            const mPath = mount.mount.toLowerCase();
+            const fPath = folderObj.path.toLowerCase();
+            const mountSlug = mPath.replace(/^\/|\/$/g, '');
+            const hasKeywordOverlap = coreKeywords.some(kw => fPath.includes(kw) && mPath.includes(kw));
+
+            if ((mountSlug && fPath.includes(mountSlug)) || hasKeywordOverlap) {
+               aliases.push({ 
+                   user: user.userName, 
+                   path: mount.mount, 
+                   isPrimary: user.userName === folderObj.username 
+                });
+            }
+          });
+      }
     });
     return aliases;
   }, [resource.type, folderObj]);
+
+  const currentMountContext = useMemo(() => {
+    if (resource.type === 'folder' && folderObj) {
+        const primaryMount = folderAliases.find(a => a.isPrimary);
+        // If there's only one, show that alias. If multiple, show the actual physical path in the header badge.
+        return { 
+            name: folderObj.folderName, 
+            isMount: true, 
+            mountPath: folderAliases.length > 1 ? folderObj.path : (primaryMount?.path || folderObj.path),
+            label: folderAliases.length > 1 ? "PHYSICAL PATH" : "SYSTEM MOUNT PATH"
+        };
+    }
+    if (path.length === 0) return null;
+    return { ...path[0], label: "SYSTEM MOUNT PATH" }; 
+  }, [path, resource, folderObj, folderAliases]);
 
   const linkedInstance = useMemo(() => {
       if (!selectedItem || selectedItem.type !== 'file') return null;
@@ -150,7 +167,7 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
             <div className="bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-lg flex items-center shadow-sm">
                 <div className="mr-3 p-1.5 bg-white rounded border border-indigo-100 text-indigo-500"><LinkIcon /></div>
                 <div>
-                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none">System Mount Path</p>
+                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none">{(currentMountContext as any).label}</p>
                     <p className="text-sm font-black text-indigo-700 font-mono leading-tight mt-0.5">{currentMountContext.mountPath}</p>
                 </div>
             </div>
@@ -260,8 +277,8 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
                                 {(selectedItem || path[path.length-1] || folderObj!).type === 'folder' || (selectedItem || path[path.length-1] || folderObj!).type === undefined ? <FolderIcon className="h-10 w-10 text-sky-500" /> : <FileIcon className="h-10 w-10" />}
                             </div>
                             <h3 className="font-bold text-slate-800 text-lg break-all">{(selectedItem || path[path.length-1])?.name || folderObj?.folderName}</h3>
-                            <span className="text-xs text-slate-400 font-mono uppercase">
-                                {(selectedItem || currentMountContext)?.isMount ? 'Storage Mount Point' : (selectedItem?.type || 'Registry Folder')}
+                            <span className="text-xs text-slate-400 font-mono uppercase tracking-tighter">
+                                {(selectedItem || currentMountContext)?.isMount ? 'Storage Mount Resource' : (selectedItem?.type || 'Registry Folder')}
                             </span>
                         </div>
 
@@ -291,13 +308,17 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
                         )}
 
                         {resource.type === 'folder' && isAtRoot && folderAliases.length > 0 && (
-                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center"><LinkIcon /> Mount Aliases</h4>
-                                <ul className="space-y-2">
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 shadow-sm">
+                                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center"><LinkIcon /> Mount Aliases ({folderAliases.length})</h4>
+                                <ul className="space-y-2 max-h-40 overflow-y-auto pr-1">
                                     {folderAliases.map((a, i) => (
-                                        <li key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded border border-indigo-100">
-                                            <div className="flex items-center text-slate-700 font-bold"><UserIcon /> <span className="ml-1">{a.user}</span></div>
-                                            <code className="text-indigo-600 font-black">{a.path}</code>
+                                        <li key={i} className={`flex items-center justify-between text-xs bg-white p-2 rounded border ${a.isPrimary ? 'border-sky-300 ring-1 ring-sky-100' : 'border-indigo-100'}`}>
+                                            <div className="flex items-center text-slate-700 font-bold overflow-hidden">
+                                                <UserIcon /> 
+                                                <span className="ml-1 truncate max-w-[100px]">{a.user}</span>
+                                                {a.isPrimary && <span className="ml-1.5 bg-sky-100 text-sky-700 text-[8px] px-1 rounded uppercase">Owner</span>}
+                                            </div>
+                                            <code className="text-indigo-600 font-black ml-2 whitespace-nowrap">{a.path}</code>
                                         </li>
                                     ))}
                                 </ul>
@@ -315,19 +336,15 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
                                     {(selectedItem || currentMountContext)?.isMount && (
                                          <>
                                             <div className="flex justify-between">
-                                                <dt className="text-slate-500">Technical Alias</dt>
-                                                <dd className="text-indigo-600 font-mono font-black">{(selectedItem || currentMountContext!).mountPath}</dd>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <dt className="text-slate-500">Mount Target</dt>
-                                                <dd className="text-sky-700 font-bold">{(selectedItem || currentMountContext!).mountStorageName}</dd>
+                                                <dt className="text-slate-500">Resource Target</dt>
+                                                <dd className="text-sky-700 font-bold">{(selectedItem || currentMountContext!).mountStorageName || "Registry-Defined"}</dd>
                                             </div>
                                          </>
                                     )}
                                     {folderObj && isAtRoot && (
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between pt-1">
                                             <dt className="text-slate-500">Physical Path</dt>
-                                            <dd className="text-slate-700 font-mono text-[10px] break-all text-right max-w-[150px]">{folderObj.path}</dd>
+                                            <dd className="text-slate-700 font-mono text-[10px] break-all text-right max-w-[150px] leading-tight">{folderObj.path}</dd>
                                         </div>
                                     )}
                                 </dl>
@@ -335,7 +352,7 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
                         </div>
 
                         <div className="bg-sky-50 border border-sky-100 p-4 rounded-lg shadow-inner text-xs text-sky-800 leading-relaxed font-medium">
-                            <span className="font-black">Notice:</span> Read-Only mode. Actions are restricted.
+                            <span className="font-black">Notice:</span> Read-Only mode. Content modification is restricted in this workbench.
                         </div>
                     </div>
                 ) : (

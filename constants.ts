@@ -494,9 +494,24 @@ export const mockDiaUsers: DiaUser[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-15T16:00:00Z',
     updatedTs: '2024-03-10T09:00:00Z',
-    rbac: { resource: 'STOR-003' },
+    rbac: { resource: 'STOR-001' },
     storageMount: [
-        { storageName: 'LSG_INBOUND_SFTP', mount: '/secure', permissions: ['READ', 'WRITE'] }
+        { storageName: 'S3_LANDING_BUCKET', mount: '/external_inbound', permissions: ['WRITE'] }
+    ]
+  },
+  {
+    resourceName: 'USER-008',
+    tenantId: 'mondo',
+    userName: 'system_operator',
+    description: 'System-wide maintenance user',
+    type: 'SYSTEM_USER',
+    app: 'Humana_ClaimsProcessing',
+    status: ResourceStatus.ACTIVE,
+    createdTs: '2024-01-01T00:00:00Z',
+    updatedTs: '2024-03-20T10:00:00Z',
+    rbac: { resource: 'STOR-001' },
+    storageMount: [
+        { storageName: 'S3_LANDING_BUCKET', mount: '/admin_inbound', permissions: ['READ', 'WRITE'] }
     ]
   }
 ];
