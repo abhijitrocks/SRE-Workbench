@@ -23,7 +23,7 @@ const FolderPanel: React.FC<{
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [fileAppFilter, setFileAppFilter] = useState('All');
   
-  const [selectedSpec, setSelectedSpec] = useState<DiaFolder | null>(null);
+  const [selectedSpec, setSelectedSpec] = useState<any>(null);
 
   useEffect(() => {
     if (initialUserFilter) setUserNameFilter(initialUserFilter);
@@ -61,22 +61,16 @@ const FolderPanel: React.FC<{
       .filter(f => fileAppFilter === 'All' || (f.fileApplication?.name === fileAppFilter));
   }, [tenant, tenantIdFilter, userNameFilter, folderNameFilter, folderPathFilter, statusFilter, fileAppFilter]);
 
-  // Robust matching for multiple mount aliases
   const getMountAliases = (folder: DiaFolder) => {
     const aliases: { user: string; path: string }[] = [];
     const coreKeywords = ['inbound', 'processing', 'vault', 'archive', 'secure', 'workdir'];
     
     mockDiaUsers.forEach(user => {
-      // Heuristic: If they belong to the same app context, we check if their mount logic aligns with this folder
       if (user.app === folder.app) {
           user.storageMount?.forEach(mount => {
             const mPath = mount.mount.toLowerCase();
             const fPath = folder.path.toLowerCase();
-            
-            // Check 1: Direct string overlap (e.g., mount '/inbound' is found in physical path '/.../inbound')
-            const mountSlug = mPath.replace(/^\/|\/$/g, ''); // strip leading/trailing slashes
-            
-            // Check 2: Core keyword intersection (e.g., both contain 'inbound')
+            const mountSlug = mPath.replace(/^\/|\/$/g, '');
             const hasKeywordOverlap = coreKeywords.some(kw => fPath.includes(kw) && mPath.includes(kw));
 
             if ((mountSlug && fPath.includes(mountSlug)) || hasKeywordOverlap) {
@@ -85,9 +79,16 @@ const FolderPanel: React.FC<{
           });
       }
     });
-    
-    // De-duplicate same path used by multiple users if necessary, but here we want to see the aliases
     return aliases;
+  };
+
+  const handleViewSpec = (folder: DiaFolder) => {
+      const aliases = getMountAliases(folder);
+      // We decorate the spec with derived mounting context to provide better observability
+      setSelectedSpec({
+          ...folder,
+          active_mount_context: aliases.length > 0 ? aliases : "None detected in current user registry"
+      });
   };
 
   const resetFilters = () => {
@@ -202,7 +203,7 @@ const FolderPanel: React.FC<{
                   <td className="px-6 py-4 whitespace-nowrap font-mono text-slate-600">{folder.tenantId}</td>
                   <td 
                     className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-amber-50/50"
-                    onClick={() => setSelectedSpec(folder)}
+                    onClick={() => handleViewSpec(folder)}
                   >
                     <div className="flex items-center">
                       {folder.folderType === 'FOLDER' ? <FolderIcon /> : <SmartFolderIcon />}
@@ -250,7 +251,7 @@ const FolderPanel: React.FC<{
                           <DrillIcon />
                       </button>
                       <button 
-                          onClick={() => setSelectedSpec(folder)}
+                          onClick={() => handleViewSpec(folder)}
                           className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
                           title="View Spec"
                       >

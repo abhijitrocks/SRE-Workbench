@@ -15,12 +15,12 @@ const AlertTriangleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="1
 const UserPanel: React.FC<{ 
   tenant: Tenant; 
   onNavigateToFolders: (userName: string) => void; 
-  onDrillDown: (type: 'user' | 'folder', id: string, name: string) => void;
+  onDrillDown: (type: 'user' | 'folder' | 'app', id: string, name: string) => void;
 }> = ({ tenant, onNavigateToFolders, onDrillDown }) => {
   const [tenantIdFilter, setTenantIdFilter] = useState('All');
   const [userNameFilter, setUserNameFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [selectedSpec, setSelectedSpec] = useState<DiaUser | null>(null);
+  const [selectedSpec, setSelectedSpec] = useState<any>(null);
 
   // Derive unique lists from mock data
   const availableTenants = useMemo(() => {
@@ -44,6 +44,14 @@ const UserPanel: React.FC<{
   const getUserMetrics = (userName: string, mountsCount: number = 0) => {
     const ownedFolders = mockDiaFolders.filter(f => f.username === userName).length;
     return { ownedFolders, activeMounts: mountsCount, gap: ownedFolders > 0 && mountsCount === 0 };
+  };
+
+  const handleViewSpec = (user: DiaUser) => {
+      const owned = mockDiaFolders.filter(f => f.username === user.userName).map(f => ({ name: f.folderName, physical_path: f.path }));
+      setSelectedSpec({
+          ...user,
+          folder_ownership_context: owned.length > 0 ? owned : "None assigned"
+      });
   };
 
   const resetFilters = () => {
@@ -121,7 +129,7 @@ const UserPanel: React.FC<{
                   <td className="px-6 py-4 whitespace-nowrap font-mono text-slate-600">{user.tenantId}</td>
                   <td 
                     className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-indigo-50/50"
-                    onClick={() => setSelectedSpec(user)}
+                    onClick={() => handleViewSpec(user)}
                   >
                     <div className="flex items-center">
                       <UserIcon />
@@ -165,7 +173,7 @@ const UserPanel: React.FC<{
                           <DrillIcon />
                       </button>
                       <button 
-                          onClick={() => setSelectedSpec(user)}
+                          onClick={() => handleViewSpec(user)}
                           className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
                           title="View Spec"
                       >
