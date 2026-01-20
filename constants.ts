@@ -479,7 +479,10 @@ export const mockDiaUsers: DiaUser[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-02-15T10:00:00Z',
     updatedTs: '2024-02-15T10:00:00Z',
-    rbac: { resource: 'STOR-002' }
+    rbac: { resource: 'STOR-002' },
+    storageMount: [
+        { storageName: 'PERF_METRICS_STORE', mount: '/workdir', permissions: ['READ', 'WRITE'] }
+    ]
   },
   {
     resourceName: 'USER-003',
@@ -491,7 +494,10 @@ export const mockDiaUsers: DiaUser[] = [
     status: ResourceStatus.ACTIVE,
     createdTs: '2024-01-15T16:00:00Z',
     updatedTs: '2024-03-10T09:00:00Z',
-    rbac: { resource: 'STOR-003' }
+    rbac: { resource: 'STOR-003' },
+    storageMount: [
+        { storageName: 'LSG_INBOUND_SFTP', mount: '/secure', permissions: ['READ', 'WRITE'] }
+    ]
   }
 ];
 

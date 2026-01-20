@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Tenant, DiaUser, ResourceStatus } from '../../types';
-import { mockDiaUsers, mockTenants } from '../../constants';
+import { mockDiaUsers, mockTenants, mockDiaFolders } from '../../constants';
 import SpecYamlViewerModal from './SpecYamlViewerModal';
 
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-400"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>;
@@ -10,6 +10,7 @@ const FolderIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" heig
 const CodeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>;
 const DrillIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>;
 const FilterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>;
+const AlertTriangleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 mr-1"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>;
 
 const UserPanel: React.FC<{ 
   tenant: Tenant; 
@@ -39,6 +40,11 @@ const UserPanel: React.FC<{
       .filter(u => userNameFilter === 'All' || u.userName === userNameFilter)
       .filter(u => statusFilter === 'All' || u.status === statusFilter);
   }, [tenant, tenantIdFilter, userNameFilter, statusFilter]);
+
+  const getUserMetrics = (userName: string, mountsCount: number = 0) => {
+    const ownedFolders = mockDiaFolders.filter(f => f.username === userName).length;
+    return { ownedFolders, activeMounts: mountsCount, gap: ownedFolders > 0 && mountsCount === 0 };
+  };
 
   const resetFilters = () => {
     setTenantIdFilter('All');
@@ -101,67 +107,78 @@ const UserPanel: React.FC<{
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Tenant Id</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">User Name</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Created at</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Updated at</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase text-center">Owned Folders</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase text-center">Active Mounts</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
               <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
-            {filteredUsers.map((user) => (
-              <tr key={user.resourceName} className="hover:bg-slate-50 transition-colors group">
-                <td className="px-6 py-4 whitespace-nowrap font-mono text-slate-600">{user.tenantId}</td>
-                <td 
-                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-indigo-50/50"
-                  onClick={() => setSelectedSpec(user)}
-                >
-                  <div className="flex items-center">
-                    <UserIcon />
-                    <div className="ml-3">
-                        <span className="font-bold text-slate-900 block group-hover:text-indigo-600 transition-colors">{user.userName}</span>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{user.type.replace('_', ' ')}</span>
+            {filteredUsers.map((user) => {
+              const metrics = getUserMetrics(user.userName, user.storageMount?.length || 0);
+              return (
+                <tr key={user.resourceName} className="hover:bg-slate-50 transition-colors group">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-slate-600">{user.tenantId}</td>
+                  <td 
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-indigo-50/50"
+                    onClick={() => setSelectedSpec(user)}
+                  >
+                    <div className="flex items-center">
+                      <UserIcon />
+                      <div className="ml-3">
+                          <span className="font-bold text-slate-900 block group-hover:text-indigo-600 transition-colors">{user.userName}</span>
+                          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{user.type.replace('_', ' ')}</span>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-slate-500">{user.description}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-slate-500">{new Date(user.createdTs).toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-slate-500">{new Date(user.updatedTs).toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs font-bold rounded-full ${user.status === ResourceStatus.ACTIVE ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                    {user.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <div className="flex items-center justify-end space-x-2">
-                    <button 
-                        onClick={() => onNavigateToFolders(user.userName)}
-                        className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                        title="View Linked Folders"
-                    >
-                        <FolderIcon />
-                    </button>
-                    <button 
-                        onClick={() => onDrillDown('user', user.resourceName, user.userName)}
-                        className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                        title="Explore User Home Dir"
-                    >
-                        <DrillIcon />
-                    </button>
-                    <button 
-                        onClick={() => setSelectedSpec(user)}
-                        className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                        title="View Spec"
-                    >
-                        <CodeIcon />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center font-bold text-slate-700">{metrics.ownedFolders}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col items-center justify-center">
+                        <span className={`font-black text-sm ${metrics.gap ? 'text-amber-600' : 'text-slate-900'}`}>{metrics.activeMounts}</span>
+                        {metrics.gap && (
+                            <div className="flex items-center mt-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 animate-pulse" title="Configuration Gap: User owns folders but has no active runtime mounts.">
+                                <AlertTriangleIcon />
+                                <span className="text-[8px] font-black text-amber-700 uppercase tracking-tighter leading-none">Gap</span>
+                            </div>
+                        )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${user.status === ResourceStatus.ACTIVE ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {user.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      <button 
+                          onClick={() => onNavigateToFolders(user.userName)}
+                          className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                          title="View Linked Folders"
+                      >
+                          <FolderIcon />
+                      </button>
+                      <button 
+                          onClick={() => onDrillDown('user', user.resourceName, user.userName)}
+                          className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                          title="Explore User Home Dir"
+                      >
+                          <DrillIcon />
+                      </button>
+                      <button 
+                          onClick={() => setSelectedSpec(user)}
+                          className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                          title="View Spec"
+                      >
+                          <CodeIcon />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-slate-500 italic">No users found matching filters.</td>
+                <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">No users found matching filters.</td>
               </tr>
             )}
           </tbody>
