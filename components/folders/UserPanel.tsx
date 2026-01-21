@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Tenant, DiaUser, ResourceStatus } from '../../types';
 import { mockDiaUsers, mockTenants, mockDiaFolders } from '../../constants';
@@ -60,6 +59,11 @@ const UserPanel: React.FC<{
     setStatusFilter('All');
   };
 
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
       <div className="p-4 border-b border-slate-200 bg-slate-50/50">
@@ -113,12 +117,14 @@ const UserPanel: React.FC<{
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Tenant Id</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">User Name</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase text-center">Owned Folders</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase text-center">Active Mounts</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tenant Id</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">User Name</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Owned Folders</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Active Mounts</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Created at</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Updated at</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
@@ -151,6 +157,8 @@ const UserPanel: React.FC<{
                         )}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs">{formatShortDate(user.createdTs)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs">{formatShortDate(user.updatedTs)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-bold rounded-full ${user.status === ResourceStatus.ACTIVE ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
                       {user.status}
@@ -186,7 +194,7 @@ const UserPanel: React.FC<{
             })}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">No users found matching filters.</td>
+                <td colSpan={8} className="px-6 py-12 text-center text-slate-500 italic">No users found matching filters.</td>
               </tr>
             )}
           </tbody>

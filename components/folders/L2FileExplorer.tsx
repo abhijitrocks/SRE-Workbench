@@ -104,6 +104,7 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
     return aliases;
   }, [resource.type, folderObj]);
 
+  // Fix: Added mountStorageName to the return object of currentMountContext for consistency.
   const currentMountContext = useMemo(() => {
     if (resource.type === 'folder' && folderObj) {
         const primaryMount = folderAliases.find(a => a.isPrimary);
@@ -112,7 +113,8 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
             name: folderObj.folderName, 
             isMount: true, 
             mountPath: folderAliases.length > 1 ? folderObj.path : (primaryMount?.path || folderObj.path),
-            label: folderAliases.length > 1 ? "PHYSICAL PATH" : "SYSTEM MOUNT PATH"
+            label: folderAliases.length > 1 ? "PHYSICAL PATH" : "SYSTEM MOUNT PATH",
+            mountStorageName: folderObj.resourceName
         };
     }
     if (path.length === 0) return null;
@@ -274,7 +276,8 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
                     <div className="space-y-6">
                         <div className="flex flex-col items-center text-center">
                             <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center mb-4">
-                                {(selectedItem || path[path.length-1] || folderObj!).type === 'folder' || (selectedItem || path[path.length-1] || folderObj!).type === undefined ? <FolderIcon className="h-10 w-10 text-sky-500" /> : <FileIcon className="h-10 w-10" />}
+                                {/* Fix: Simplified type check and used casting to access 'type' property on union type safely. */}
+                                {((selectedItem || path[path.length-1] || folderObj!) as any).type === 'file' ? <FileIcon className="h-10 w-10" /> : <FolderIcon className="h-10 w-10 text-sky-500" />}
                             </div>
                             <h3 className="font-bold text-slate-800 text-lg break-all">{(selectedItem || path[path.length-1])?.name || folderObj?.folderName}</h3>
                             <span className="text-xs text-slate-400 font-mono uppercase tracking-tighter">
@@ -331,13 +334,15 @@ const L2FileExplorer: React.FC<L2FileExplorerProps> = ({ resource, onBack, onSel
                                 <dl className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                         <dt className="text-slate-500">Modified</dt>
-                                        <dd className="text-slate-800 font-medium text-xs font-mono">{new Date((selectedItem || path[path.length-1] || folderObj!).updatedAt || folderObj?.updatedTs || Date.now()).toLocaleString()}</dd>
+                                        {/* Fix: Safely access modified timestamp using casting for union type. */}
+                                        <dd className="text-slate-800 font-medium text-xs font-mono">{new Date(((selectedItem || path[path.length-1]) as any)?.updatedAt || (folderObj as any)?.updatedTs || Date.now()).toLocaleString()}</dd>
                                     </div>
                                     {(selectedItem || currentMountContext)?.isMount && (
                                          <>
                                             <div className="flex justify-between">
                                                 <dt className="text-slate-500">Resource Target</dt>
-                                                <dd className="text-sky-700 font-bold">{(selectedItem || currentMountContext!).mountStorageName || "Registry-Defined"}</dd>
+                                                {/* Fix: safely access mountStorageName from context. */}
+                                                <dd className="text-sky-700 font-bold">{(selectedItem || (currentMountContext as any))!.mountStorageName || "Registry-Defined"}</dd>
                                             </div>
                                          </>
                                     )}

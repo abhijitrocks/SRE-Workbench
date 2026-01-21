@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Tenant, DiaFolder, ResourceStatus, DiaUser } from '../../types';
 import { mockDiaFolders, mockTenants, mockDiaUsers } from '../../constants';
@@ -100,6 +99,11 @@ const FolderPanel: React.FC<{
     setFileAppFilter('All');
   };
 
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
       <div className="p-4 border-b border-slate-200 bg-slate-50/50">
@@ -186,13 +190,16 @@ const FolderPanel: React.FC<{
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Tenant Id</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Folder Name</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Owner</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Mount Aliases</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">File App</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tenant Id</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Folder Name</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Folder Path</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">User Name</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Mount Aliases</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider text-nowrap">Created at</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider text-nowrap">Updated at</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">File App</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
@@ -213,6 +220,11 @@ const FolderPanel: React.FC<{
                       </div>
                     </div>
                   </td>
+                  <td className="px-6 py-4">
+                    <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-600 truncate max-w-[200px] block" title={folder.path}>
+                        {folder.path}
+                    </code>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-700 font-medium">{folder.username}</td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1 max-w-[250px]">
@@ -224,6 +236,8 @@ const FolderPanel: React.FC<{
                       {aliases.length === 0 && <span className="text-slate-300 italic text-xs">No active mounts</span>}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs">{formatShortDate(folder.createdTs)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs">{formatShortDate(folder.updatedTs)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-bold rounded-full ${folder.status === ResourceStatus.ACTIVE ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
                       {folder.status}
@@ -264,7 +278,7 @@ const FolderPanel: React.FC<{
             })}
             {filteredFolders.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-slate-500 italic">No folders found matching filters.</td>
+                <td colSpan={10} className="px-6 py-12 text-center text-slate-500 italic">No folders found matching filters.</td>
               </tr>
             )}
           </tbody>
